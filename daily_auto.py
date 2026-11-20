@@ -81,7 +81,22 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page(viewport={'width': 1100, 'height': 1900})
     page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
-    page.goto((ROOT / 'index.html').as_uri(), wait_until='load')
+        import functools, http.server, threading
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler,
+        directory=str(ROOT)
+    )
+    server = http.server.ThreadingHTTPServer(
+        ('127.0.0.1', 0), handler
+    )
+    threading.Thread(
+        target=server.serve_forever, daemon=True
+    ).start()
+    page.goto(
+        f'http://127.0.0.1:{server.server_port}/index.html',
+        wait_until='load'
+    )
+
     page.evaluate('document.fonts.ready')
     page.wait_for_timeout(800)
     error = page.locator('#errors').inner_text()
