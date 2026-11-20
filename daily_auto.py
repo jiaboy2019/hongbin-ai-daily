@@ -81,7 +81,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page(viewport={'width': 1100, 'height': 1900})
     page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
-        import functools, http.server, threading
+    import functools, http.server, threading
     handler = functools.partial(
         http.server.SimpleHTTPRequestHandler,
         directory=str(ROOT)
