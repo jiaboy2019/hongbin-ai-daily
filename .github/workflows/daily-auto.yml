@@ -19,7 +19,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；复测新闻重要性评分、可信媒体优先及低价值内容过滤
+    # 使用固定母版进行完整出图验收；复测全球AI大厂及重大技术进展优先、地方资讯降权
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
