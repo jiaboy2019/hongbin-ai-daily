@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test dedicated editorial eligibility for named AI practitioners and researchers.
+# Diagnose person-news rejection reasons before changing editorial rules again.
