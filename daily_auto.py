@@ -27,7 +27,7 @@ SUBSTANTIVE = ('重大突破','首次','全球首','新一代','发布','推出'
 LOW_VALUE = ('昨夜今晨','早报汇总','科技早报','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手','心理困扰','关联机制','中介作用','调节效应','三年行动方案','五张清单','地方出台','研讨会','论坛','或将','传闻','rumor','rumour')
 # 对极易引发误传的重大事件，默认不使用单一转载标题作为已证实事实。
 # 只有在独立核验流程建立后，才考虑恢复这类高风险报道。
-HIGH_RISK_CLAIMS = ('上市','ipo','被迫出局','被解雇','辞职','去世','收购完成','宣布破产','宣布倒闭','遭逮捕','涉嫌犯罪','万亿估值落槌')
+HIGH_RISK_CLAIMS = ('回归英伟达','离职一周','第二次机会','出轨','证明黎曼猜想','攻克黎曼猜想','数学界第一神山','上市','ipo','被迫出局','被解雇','辞职','去世','收购完成','宣布破产','宣布倒闭','遭逮捕','涉嫌犯罪','万亿估值落槌')
 SUSPICIOUS_AGGREGATORS = ('moomoo','investing.com','sina.com','搜狐','sohu','techgenyz')
 def editorial_eligible(row):
     title = row.get('title','').lower()
@@ -280,6 +280,181 @@ leader_rows += gather(['奥尔特曼 人工智能 发布', '黄仁勋 人工智�
 # 把已有名单中的名字作为识别提示，同时识别新闻标题中的中文姓名和英文姓名。
 name_roles = dict(people)
 def identify_person(title):
+    # 新闻站点常把人名塞在 URL/SEO 标签后缀，不能当作人物报道。
+    title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
+    title = re.sub(r'_[^\s]*新浪新闻.*
+        if re.search(r'(?<![A-Za-z])'+re.escape(name)+r'(?![A-Za-z])',title,re.I): return name, role
+    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
+    if m: return m.group(1), '科技人物'
+    m = re.search(r'^([\\u4e00-\\u9fff]{2,4})[：称说表示认为谈]', title)
+    if m: return m.group(1), '科技人物'
+    return None, None
+def is_chinese_text(t):
+    return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
+for r in sorted(leader_rows, key=score, reverse=True):
+    name, role = identify_person(r['title'])
+    if not name or name in leader_names: continue
+    if score(r)<8 or not editorial_eligible(r): continue
+    if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
+    if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
+    if not is_chinese_text(r['title']): continue
+    leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
+    selected.append(r); leader_names.append(name)
+    if len(leaders) == 3: break
+# 绝不把普通科技新闻冒充人物动态；人物不足时继续拓展搜索。
+if len(leaders) < 3:
+    extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
+    for r in extra:
+        name, role = identify_person(r['title'])
+        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8: continue
+        if not any(w in r['title'].lower() for w in ('ai','人工智能','模型','机器人','芯片','智能体','科研','发布','技术','agent','robot')): continue
+        leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
+        selected.append(r); leader_names.append(name)
+        if len(leaders)==3: break
+
+used = {r['key'] for r in selected}
+news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
+# 国际媒体独立采集，不能只使用中国区中文搜索。
+international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
+news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
+direct_news = direct_feed_rows()
+news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
+print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
+if len(news) < 4:
+    raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4。保持原模板和新闻标准，停止出图。')
+# 新闻不再受预设配图词表限制，按媒体报道候选选取。
+news = sorted(news, key=score, reverse=True)
+# 优先兼顾国际媒体和中文媒体，并避免四条都来自同一来源。
+intl = [r for r in news if r in international_news or (r in direct_news and r['source'] not in ('量子位','机器之心','36氪'))]
+domestic = [r for r in news if r not in international_news]
+chosen = []
+for pool in (intl, domestic, intl, domestic, news):
+    for r in pool:
+        if r not in chosen and not any(similar(r['title'], x['title']) for x in chosen) and (r['source'] not in {x['source'] for x in chosen} or len(chosen) >= 3):
+            chosen.append(r); break
+    if len(chosen) == 4: break
+news = chosen if len(chosen) == 4 else news[:4]
+# 翻译服务可能限流。优先选取已有中文标题的新闻，避免英文截断出现在朋友圈。
+def is_chinese_ready(row):
+    t = to_chinese(row['title'])
+    return len(re.findall('[一-鿿]', t)) >= 8 and len(re.findall(r'[A-Za-z]', t)) <= len(t)*0.55
+
+# 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
+# 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],key=score,reverse=True)
+new_selection = []
+for r in ready_pool:
+    if r['key'] in {x['key'] for x in new_selection}: continue
+    if any(similar(r['title'],x['title']) for x in new_selection): continue
+    if len(new_selection) < 3 and r['source'] in {x['source'] for x in new_selection}: continue
+    new_selection.append(r)
+    if len(new_selection)==4: break
+if len(new_selection)<4:
+    for r in ready_pool:
+        if r['key'] not in {x['key'] for x in new_selection} and not any(similar(r['title'],x['title']) for x in new_selection): new_selection.append(r)
+        if len(new_selection)==4: break
+if len(new_selection)<4:
+    raise RuntimeError('中文新闻不足4条：拒绝输出英文残缺标题，请检查新闻源与翻译服务')
+news = new_selection
+
+# 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
+# 未达标时工作流失败，不覆盖已发布的正式成品。
+UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\d+)?')
+def valid_summary(row):
+    desc = tidy(row.get('description', ''))
+    title = tidy(row['title'])
+    return len(desc) >= 25 and desc.lower() not in title.lower() and title.lower() not in desc.lower()
+
+if len(leaders) != 3:
+    # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
+    report = {
+        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
+        'reason': f'科技人物仅{len(leaders)}/3条',
+        'selected_person_candidates_unverified': leaders,
+        'person_search_candidates': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description',''))[:240],
+             'score': score(r), 'recognized_person': identify_person(r['title'])[0]}
+            for r in sorted(leader_rows, key=score, reverse=True)[:35]
+        ],
+        'news_candidates': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description',''))[:240], 'score': score(r)}
+            for r in ready_pool[:30]
+        ],
+        'note': '仅供编辑审阅，候选未完成独立事实核验，不能直接发布。'
+    }
+    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
+    raise RuntimeError(f'人物动态仅{len(leaders)}/3条，已输出待审候选报告，拒绝用占位新闻出图')
+if any(not valid_summary(r) for r in news + selected):
+    raise RuntimeError('部分新闻缺少独立的事实摘要，拒绝仅重复标题出图')
+if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
+    raise RuntimeError('发现未经独立确认的模型版本号，停止出图')
+
+issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
+data = {
+    'issue': issue, 'date': TODAY.isoformat(),
+    'headline': {'title': clip(to_chinese(news[0]['title']), 32), 'body': article_body(news[0], 88), 'source': news[0]['source']},
+    'updates': [{'tag': tag, 'title': clip(to_chinese(r['title']), 26), 'body': article_body(r, 75), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
+    'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
+}
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page(viewport={'width': 1100, 'height': 1900})
+    page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
+    import functools, http.server, threading
+    handler = functools.partial(
+        http.server.SimpleHTTPRequestHandler,
+        directory=str(ROOT)
+    )
+    server = http.server.ThreadingHTTPServer(
+        ('127.0.0.1', 0), handler
+    )
+    threading.Thread(
+        target=server.serve_forever, daemon=True
+    ).start()
+    page.goto(
+        f'http://127.0.0.1:{server.server_port}/index.html',
+        wait_until='load'
+    )
+
+    page.evaluate('document.fonts.ready')
+    # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
+    news_image_count = 0
+    used_image_pages = set()
+    for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
+        uri, matched = fetch_news_image(row['title'], used_image_pages)
+        if uri:
+            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
+            print('新闻配图:', key, matched)
+            news_image_count += 1
+    print('成功加载新闻相关配图:', news_image_count, '/4')
+    # 缺图不阻断出图，沿用原模板的图片占位设计。
+    # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
+    portrait_count = 0
+    for i, person in enumerate(leader_names):
+        uri = fetch_portrait(person)
+        if uri:
+            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
+            portrait_count += 1
+    print('成功加载人物照片:', portrait_count, '/', len(leader_names))
+    # 无肖像的新闻人物使用原模板占位，不能因此中断出图。
+    page.wait_for_timeout(800)
+    error = page.locator('#errors').inner_text()
+    if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
+        raise RuntimeError('原版地球图标加载失败，停止导出')
+    if error.strip():
+        print('模板文字提醒:', error)
+    png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
+    (OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
+    (OUT / '洪滨每日AI早报.png').write_bytes(base64.b64decode(png))
+    browser.close()
+    server.shutdown()
+state['last_issue'] = int(issue)
+state['items'] = (state['items'] + [{'key': r['key'], 'title': r['title'], 'date': TODAY.isoformat()} for r in news + selected])[-500:]
+HISTORY.write_text(json.dumps(state, ensure_ascii=False, indent=2), 'utf-8')
+print('已生成', OUT / '洪滨每日AI早报.png')
+, '', title)
     for name, role in name_roles.items():
         if re.search(r'(?<![A-Za-z])'+re.escape(name)+r'(?![A-Za-z])',title,re.I): return name, role
     m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
