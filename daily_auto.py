@@ -13,7 +13,7 @@ OUT.mkdir(exist_ok=True)
 TODAY = dt.datetime.now(ZoneInfo('Asia/Shanghai')).date()
 HISTORY = ROOT / 'published_history.json'
 state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
-old = {x['key'] for x in state['items']}
+old = {x['key'] for x in state['items'] if x.get('date') != TODAY.isoformat()}
 # 同一天重跑时不自动增加期号，避免测试造成跳号。
 last_dates = [x.get('date') for x in state['items']]
 SAME_DAY = TODAY.isoformat() in last_dates[-7:]
@@ -351,6 +351,21 @@ if len(new_selection)<4:
 if len(new_selection)<4:
     raise RuntimeError('中文新闻不足4条：拒绝输出英文残缺标题，请检查新闻源与翻译服务')
 news = new_selection
+
+# 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
+# 未达标时工作流失败，不覆盖已发布的正式成品。
+UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\\.2', r'GPT-7(?:\\.\\d+)?', r'Claude\\s+6(?:\\.\\d+)?')
+def valid_summary(row):
+    desc = tidy(row.get('description', ''))
+    title = tidy(row['title'])
+    return len(desc) >= 25 and desc.lower() not in title.lower() and title.lower() not in desc.lower()
+
+if len(leaders) != 3:
+    raise RuntimeError(f'人物动态仅{len(leaders)}/3条，拒绝用占位新闻出图')
+if any(not valid_summary(r) for r in news + selected):
+    raise RuntimeError('部分新闻缺少独立的事实摘要，拒绝仅重复标题出图')
+if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
+    raise RuntimeError('发现未经独立确认的模型版本号，停止出图')
 
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
