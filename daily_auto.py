@@ -531,6 +531,8 @@ def short_headline(raw, limit=22):
     """Produce a short, complete factual statement, never an unfinished title."""
     title = clean_attribution(to_chinese(raw)).rstrip('。！？!?')
     title = re.split(r'\s+[-–—|｜]\s+', title)[0].strip()
+    title = re.sub(r'\bGoogle\s+Gemini\b', 'Gemini', title, flags=re.I)
+    title = re.sub(r'\bComputer Use\b', '电脑操作', title, flags=re.I)
     if text_width(title) <= limit and not title.endswith(('将','并','和','与','及','为','在','对')):
         return title
     clauses = re.split(r'[，,；;。！？!?：:]|并(?=推出|发布|宣布|开放)', title)
@@ -872,16 +874,19 @@ def editorial_rank(row):
             - row['age_hours'] / 4)
 
 
-def short_body(row, limit):
+def short_body(row, limit, headline=''):
     if not valid_description(row):
         return ''
     text = to_chinese(row['description'])
     title = to_chinese(row['title'])
     for sentence in re.split(r'(?<=[。！？])|(?<=[.!?])\s+', text):
-        body = complete_excerpt(sentence, limit)
-        if (body and len(re.findall(r'[\u4e00-\u9fff]', body)) >= 8 and not similar(body, title)
-                and not body.startswith(('据', '随着', '为了', '除了', '当时', '在此背景下', '其中'))):
-            return body
+        options = [sentence, *re.split(r'[，；;]', sentence)]
+        for clause in options:
+            body = complete_excerpt(clause, limit)
+            if (body and len(re.findall(r'[\u4e00-\u9fff]', body)) >= 8
+                    and not any(similar(body, other) for other in (title, headline))
+                    and not body.startswith(('据', '随着', '为了', '除了', '当时', '在此背景下', '其中'))):
+                return body
     return ''
 
 
@@ -918,7 +923,6 @@ def choose_people(rows, history):
             continue
         if role in BRIEFING_ROLES and not re.search(ROLE_CONTEXT, row['title'] + row['description'], re.I):
             continue
-        body = short_body(row, 54)
         headline = short_headline(story['title'], 23)
         if not (is_chinese_text(story['title']) and publishable_title(story, 23)
                 and PERSON_ACTION.search(headline)):
@@ -926,8 +930,7 @@ def choose_people(rows, history):
             if not (story is not row and is_chinese_text(row['title'])
                     and publishable_title(row, 23) and event_profile(headline)):
                 continue
-        if similar(headline, body):
-            continue
+        body = short_body(row, 54, headline)
         if not body:
             continue
         stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
@@ -972,8 +975,8 @@ def choose_news(rows, history, people_rows):
             row = enrich(row)
             if blocked(row):
                 continue
-            body = short_body(row, body_limit)
-            if not body or similar(headline, body):
+            body = short_body(row, body_limit, headline)
+            if not body:
                 continue
             cards.append({
                 'title': headline, 'body': body,

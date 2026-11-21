@@ -439,9 +439,9 @@
       "name": "腾讯官方资讯",
       "category": "official",
       "region": "CN",
-      "url": "https://www.tencent.com/zh-cn/articles/index.html",
+      "url": "https://www.tencent.com/zh-cn/newsroom/all-news/",
       "type": "web",
-      "path_prefix": "/zh-cn/articles/"
+      "article_path": "^/(?:zh-cn/)?[a-z0-9][a-z0-9-]{18,}/?$"
     },
     {
       "name": "火山引擎",
@@ -454,7 +454,7 @@
       "name": "百度智能云",
       "category": "official",
       "region": "CN",
-      "url": "https://cloud.baidu.com/news",
+      "url": "https://cloud.baidu.com/news/productNews",
       "type": "web"
     },
     {
