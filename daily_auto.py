@@ -187,7 +187,12 @@ def fetch_news_image(title, used_pages=None):
         if uri: used_pages.add(page); return uri, keyword
     return None, None
 
+translation_cache = {}
+translation_unavailable = False
 def to_chinese(text):
+    global translation_unavailable
+    if text in translation_cache: return translation_cache[text]
+    if translation_unavailable: return text
     if not text or len(re.findall(r'[A-Za-z]', text)) < max(12, len(text)//3): return text
     try:
         query = urllib.parse.urlencode({'client':'gtx','sl':'auto','tl':'zh-CN','dt':'t','q':text})
@@ -195,8 +200,10 @@ def to_chinese(text):
         with urllib.request.urlopen(req, timeout=8) as resp:
             obj = json.load(resp)
         translated = ''.join(x[0] for x in obj[0] if x and x[0])
-        return translated if translated else text
+        translation_cache[text] = translated if translated else text
+        return translation_cache[text]
     except Exception as exc:
+        if '429' in str(exc): translation_unavailable = True
         print('翻译不可用，保留原文:',str(exc)[:80]); return text
 
 def article_body(row, limit):
