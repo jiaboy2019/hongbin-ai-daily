@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "贝森特称，Anthropic 创始人将向特朗普账户捐款",
-    "body": "贝森特称，Anthropic 创始人将向特朗普账户捐款。",
-    "source": "Bloomberg.com"
+    "title": "8万条群聊消息做成考卷",
+    "body": "8万条群聊消息做成考卷：腾讯元宝×KCL发布首个基于群聊构建的Agent记忆基准。",
+    "source": "量子位"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "华为首款AI手机不到6千元 宣称有3大突破",
-      "body": "华为首款AI手机不到6千元 宣称有3大突破。",
-      "source": "万维读者网"
+      "title": "OpenAI推出MedChemBench基准",
+      "body": "OpenAI推出MedChemBench基准，评估人工智能辅助药物研发能力。",
+      "source": "凤凰网科技"
     },
     {
       "tag": "产品应用",
-      "title": "课题覆盖大模型安全攻防等",
-      "body": "IT之家 11 月 21 日消息。",
-      "source": "IT之家"
+      "title": "Anthropic公布AI相关动态",
+      "body": "Anthropic的数学家声称在167年历史的数学问题上取得了人工智能辅助的突破。",
+      "source": "Anadolu Ajansı"
     },
     {
       "tag": "前沿科技",
-      "title": "扩大校园人工智能工作",
-      "body": "IIT Kharagpur获Google 500万美元资助，扩大校园人工智能工作。",
-      "source": "Unite.AI"
+      "title": "成功在高考中抓获 54 名违规考生",
+      "body": "IT之家 11 月 21 日消息。",
+      "source": "IT之家"
     }
   ],
   "leaders": [
     {
       "name": "Satya Nadella｜微软CEO",
-      "title": "000 笔收购反映出向人工智能管理工作的转变",
-      "body": "萨蒂亚·纳德拉 (Satya Nadella) 表示，微软的 60,000 笔收购反映出向人工智能管理工作的转变。",
-      "source": "AI Insider"
+      "title": "在“完美风暴”袭击微软之后",
+      "body": "在“完美风暴”袭击微软之后。",
+      "source": "New York Post"
     },
     {
       "name": "Mark Zuckerberg｜Meta CEO",
-      "title": "马克·扎克伯格的元人工智能预测翻转",
-      "body": "马克·扎克伯格的元人工智能预测翻转：ADA 如何翻转 XRP。",
-      "source": "Cryptonews"
+      "title": "价格已在网上泄露",
+      "body": "马克·扎克伯格即将推出Muse Charm AI小工具，价格已在网上泄露。",
+      "source": "India Today"
     },
     {
       "name": "Sam Altman｜OpenAI CEO",
-      "title": "山姆·奥特曼电影的海报看起来像 AI slop",
-      "body": "山姆·奥特曼电影的海报看起来像 AI slop。这实际上是绝妙的营销。",
-      "source": "Fast Company"
+      "title": "人工智能领域出现新进展",
+      "body": "埃隆·马斯克嘲笑萨姆·阿尔特曼的内存和人工智能数据中心。",
+      "source": "Yahoo Tech"
     }
   ]
 }
