@@ -4,6 +4,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 from playwright.sync_api import sync_playwright
 
+# 自动生成程序：保持 index.html 与 globe.png 固定母版不变
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'output'
 OUT.mkdir(exist_ok=True)
