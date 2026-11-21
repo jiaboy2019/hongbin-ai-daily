@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "散户投资者涉足人类贸易的双方",
-    "body": "散户投资者涉足人类贸易的双方。",
-    "source": "Bloomberg.com"
+    "title": "伊春推出“AI+森林文旅”智慧应用 覆盖A级景区和重点经营主体",
+    "body": "伊春推出“AI+森林文旅”智慧应用 覆盖A级景区和重点经营主体。",
+    "source": "人民网黑龙江频道"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "人工智能网络威胁已经来临",
-      "body": "人工智能网络威胁已经来临。",
-      "source": "Financial Times"
+      "title": "国产大模型引领全球开源生态",
+      "body": "国产大模型引领全球开源生态（大数据观察·智能经济新形态）。",
+      "source": "人民网"
     },
     {
       "tag": "产品应用",
-      "title": "百度世界2026发布多项AI成果",
-      "body": "百度世界2026发布多项AI成果，李彦宏：AI下一幕是“智能组织”。",
-      "source": "风闻"
+      "title": "蔚来官宣 NWM 3.0 世界模型",
+      "body": "IT之家 11 月 21 日消息。",
+      "source": "IT之家"
     },
     {
       "tag": "前沿科技",
-      "title": "马化腾第四次改腾讯AI航道",
-      "body": "马化腾第四次改腾讯AI航道。",
-      "source": "钛媒体"
+      "title": "昇腾算力训出了双榜SOTA的具身世界模型",
+      "body": "昇腾算力训出了双榜SOTA的具身世界模型，华为云这次想把整套底座开放出来。",
+      "source": "智源社区"
     }
   ],
   "leaders": [
     {
+      "name": "Dario Amodei｜Anthropic CEO",
+      "title": "Dario Amodei是谁",
+      "body": "Dario Amodei是谁？Anthropic首席执行官的人工智能安全之旅。",
+      "source": "BusinessLine"
+    },
+    {
       "name": "梁文锋｜DeepSeek创始人",
-      "title": "DeepSeek限额与开放同行",
-      "body": "DeepSeek限额与开放同行，梁文锋到底想做什么。",
-      "source": "财富号"
+      "title": "梁文锋股权被稀释",
+      "body": "梁文锋股权被稀释！深度求索工商变更落地，DeepSeek前五大股东曝光。",
+      "source": "中华网"
     },
     {
       "name": "Sam Altman｜OpenAI CEO",
-      "title": "OpenAI公布AI相关动态",
-      "body": "OpenAI 首席执行官 Sam Altman 称阿联酋是世界上人工智能采用方面最具前瞻性的国家。",
-      "source": "Fast Company Middle East"
-    },
-    {
-      "name": "Jensen Huang｜英伟达CEO",
-      "title": "OpenAI 的 Sam Altman",
-      "body": "OpenAI 的 Sam Altman：很难想象没有黄仁勋的人工智能行业。",
-      "source": "Tempo.co English"
+      "title": "人工智能的未来已然到来",
+      "body": "人工智能的未来已然到来：Bilal Bin Saqib与OpenAI首席执行官Sam Altman的对话。",
+      "source": "TechJuice"
     }
   ]
 }
