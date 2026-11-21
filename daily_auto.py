@@ -42,7 +42,7 @@ def tidy(s):
 def norm(s):
     return hashlib.sha256(re.sub(r'[^\w\u4e00-\u9fff]', '', s.lower()).encode()).hexdigest()[:20]
 
-def search(q):
+def search(q, leader=False):
     params = urllib.parse.urlencode({'q': q + ' when:1d', 'hl':'zh-CN','gl':'CN','ceid':'CN:zh-Hans'})
     req = urllib.request.Request('https://news.google.com/rss/search?' + params, headers={'User-Agent':'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=25) as f:
@@ -61,20 +61,20 @@ def search(q):
         except (ValueError, TypeError, AttributeError):
             continue
         row = {'title': title, 'source': source[:16], 'key': k}
-        if k not in old and len(title) >= 10 and score(row) > 0 and not any(similar(title, p['title']) for p in state['items'][-100:]):
+        if k not in old and len(title) >= 10 and (leader or score(row) > 0) and not any(similar(title, p['title']) for p in state['items'][-100:]):
             rows.append(row)
     return rows
 
-def gather(queries):
+def gather(queries, leader=False):
     rows, used = [], set()
     for q in queries:
         try:
-            for r in search(q):
+            for r in search(q, leader=leader):
                 if r['key'] not in used:
                     rows.append(r); used.add(r['key'])
         except Exception as e:
             print('RSS query failed:', q, e)
-    return sorted(rows, key=score, reverse=True)
+    return sorted(rows, key=score, reverse=True) if not leader else rows
 
 
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
@@ -115,12 +115,20 @@ people = [
     ('杨立昆', 'AI科学家'), ('辛顿', 'AI科学家'),
     ('梁文锋', 'DeepSeek创始人'), ('周鸿祎', '360创始人'),
     ('雷军', '小米创始人'), ('王小川', '百川智能创始人'),
+    ('Andrej Karpathy', 'AI研究者'), ('Demis Hassabis', 'Google DeepMind CEO'),
+    ('Dario Amodei', 'Anthropic CEO'), ('Yann LeCun', 'AI科学家'),
+    ('Geoffrey Hinton', 'AI科学家'), ('Jeff Dean', 'Google首席科学家'),
+    ('Sundar Pichai', 'Alphabet CEO'), ('Mark Zuckerberg', 'Meta CEO'),
+    ('Satya Nadella', '微软CEO'), ('Jensen Huang', '英伟达CEO'),
+    ('Sam Altman', 'OpenAI CEO'), ('Fei-Fei Li', 'AI科学家'),
+    ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
+    ('Hugging Face', '开源AI团队'),
 ]
 leaders, selected, leader_names = [], [], []
 for name, role in people:
-    found = [r for r in gather([name, name + ' 人工智能', name + ' 最新动态']) if name in r['title'] and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传'))]
+    found = [r for r in gather(['"' + name + '"', '"' + name + '" (site:x.com OR site:github.com OR site:substack.com OR site:medium.com)', '"' + name + '" (AI OR 人工智能 OR 科技)'], leader=True) if name.lower() in r['title'].lower() and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传'))]
     if found:
-        r = sorted(found, key=score, reverse=True)[0]
+        r = sorted(found, key=lambda item: (score(item), len(item['title']) <= 65), reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
         selected.append(r)
         leader_names.append(name)
