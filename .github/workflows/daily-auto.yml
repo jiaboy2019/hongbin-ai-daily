@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test corrected person-name recognition without weakening factual summary checks.
+# Test 48-hour leader news and 18-hour general news windows.
