@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test update-card text fit with the fixed daily poster template.
+# Test concise complete headlines without ellipsis truncation.
