@@ -275,6 +275,8 @@ leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '�
 leader_rows = gather(leader_queries, leader=True)
 # 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
 leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
+# 直接以中文检索具体人物，减少英文翻译服务限流造成的遗漏。
+leader_rows += gather(['奥尔特曼 人工智能 发布', '黄仁勋 人工智能 芯片', '马斯克 xAI 模型', '李飞飞 世界模型', '苏姿丰 AMD AI', '皮查伊 谷歌 Gemini', '纳德拉 微软 AI', '梁文锋 DeepSeek', '王兴兴 宇树 机器人', '阿莫迪 Anthropic', '扎克伯格 Meta AI', '杨立昆 AI', '辛顿 人工智能'], leader=True)
 # 把已有名单中的名字作为识别提示，同时识别新闻标题中的中文姓名和英文姓名。
 name_roles = dict(people)
 def identify_person(title):
@@ -290,7 +292,7 @@ def is_chinese_text(t):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    if score(r)<8: continue
+    if score(r)<8 or not editorial_eligible(r): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
     if not is_chinese_text(r['title']): continue
@@ -302,7 +304,8 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r): continue
+        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8: continue
+        if not any(w in r['title'].lower() for w in ('ai','人工智能','模型','机器人','芯片','智能体','科研','发布','技术','agent','robot')): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
