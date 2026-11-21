@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "Microsoft Begins Rolling Out Au…",
-    "body": "据Redmondmag.com报道：Microsoft Begins Rolling Out Autopilot, Its Always-On Personal AI Age…",
-    "source": "Redmondmag.com"
+    "title": "Apple AI Agent: Powerful Capabi…",
+    "body": "据Techgenyz报道：Apple AI Agent: Powerful Capabilities Revealed。",
+    "source": "Techgenyz"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "Visa扩展Agentic Ready，助力全球可…",
-      "body": "据Business Wire报道：Visa扩展Agentic Ready，助力全球可信AI 商务规模化发展。",
-      "source": "Business Wire"
+      "title": "天猫新增电商经营Agent产品“AI生意管家·新商…",
+      "body": "据Moomoo报道：天猫新增电商经营Agent产品“AI生意管家·新商版” 帮助新商经营效率提升超70%。",
+      "source": "Moomoo"
     },
     {
       "tag": "产品应用",
-      "title": "AI Agent places new deman…",
-      "body": "据Vietnam.vn报道：AI Agent places new demands on marketing and sales strategie…",
-      "source": "Vietnam.vn"
+      "title": "Signal blocks screenshots…",
+      "body": "据The Decoder报道：Signal blocks screenshots on iOS 27 and Android to stop AI …",
+      "source": "The Decoder"
     },
     {
       "tag": "前沿科技",
-      "title": "SpaceX旗下AI编程平台Cursor考虑放弃中…",
-      "body": "据英为财情 Investing.com报道：SpaceX旗下AI编程平台Cursor考虑放弃中国AI模型 提供者 Investing.com。",
-      "source": "英为财情 Investing.com"
+      "title": "Apple joins the race for …",
+      "body": "据The Decoder报道：Apple joins the race for AI agents that control your device…",
+      "source": "The Decoder"
     }
   ],
   "leaders": [
     {
       "name": "Sam Altman｜OpenAI CEO",
-      "title": "MAN AND ROBOTS: This I…",
-      "body": "据Substack报道：MAN AND ROBOTS: This Is Why Jeff Bezos Didn’t W…",
-      "source": "Substack"
+      "title": "Sam Altman Warns The N…",
+      "body": "据Forbes报道：Sam Altman Warns The Next 4 Years Of AI Can’t Loo…",
+      "source": "Forbes"
     },
     {
-      "name": "Jensen Huang｜英伟达CEO",
-      "title": "AI trade stocks hit ha…",
-      "body": "据Investing.com报道：AI trade stocks hit hardest after Jensen H…",
-      "source": "Investing.com"
+      "name": "黄仁勋｜英伟达CEO",
+      "title": "英伟达全员大会细节曝光！联合创始人：黄仁勋背…",
+      "body": "据Sohu报道：英伟达全员大会细节曝光！联合创始人：黄仁勋背叛公司价值观！。",
+      "source": "Sohu"
     },
     {
-      "name": "Demis Hassabis｜Google DeepMind CEO",
-      "title": "‘Apology accepted’: Go…",
-      "body": "据The Times of India报道：‘Apology accepted’: Google chief scie…",
-      "source": "The Times of India"
+      "name": "科技人物动态｜待补充",
+      "title": "暂无可确认的人物报道",
+      "body": "继续关注国内外科技人物的最新公开动态。",
+      "source": "—"
     }
   ]
 }
