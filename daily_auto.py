@@ -590,7 +590,7 @@ def relevant_ai_news(row):
                  'ai model','robotics','robot')
     return any(word in title for word in direct_ai) or bool(re.search(r'(?<![a-z])ai(?![a-z])',title))
 
-ready_pool = sorted([r for r in news + domestic + direct_news + international_news + site_news if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news + site_news if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
@@ -623,13 +623,14 @@ if len(new_selection)<4:
     }
     (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
     raise RuntimeError('独立摘要中文新闻不足4条：已保存候选报告，停止出图')
-news = new_selection
+news = [dict(r, headline_only_news=not valid_description(r)) for r in new_selection]
 
 # 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
 # 未达标时工作流失败，不覆盖已发布的正式成品。
 UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\d+)?')
 def valid_summary(row):
     if valid_description(row): return True
+    if row.get('headline_only_news') and relevant_ai_news(row) and len(row['title'].strip()) >= 10: return True
     # 标题简讯只用于人物栏目：明确标记、真实姓名、中文事实与AI相关性。
     # 不把重复标题伪装成独立摘要，也不放宽普通新闻标准。
     return bool(row.get('headline_only_person')
