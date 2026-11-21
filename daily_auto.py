@@ -282,13 +282,13 @@ name_roles = dict(people)
 def identify_person(title):
     # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
     title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
-    title = re.sub(r'_[^\\s]*新浪新闻.*$', '', title)
+    title = re.sub(r'_[^\s]*新浪新闻.*$', '', title)
     for name, role in name_roles.items():
         if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
             return name, role
-    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
+    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\s]*([\u4e00-\u9fff]{2,4})(?:[：，称说表示认为谈]|\s)', title)
     if m: return m.group(1), '科技人物'
-    m = re.search(r'^([\\u4e00-\\u9fff]{2,4})[：称说表示认为谈]', title)
+    m = re.search(r'^([\u4e00-\u9fff]{2,4})[：称说表示认为谈]', title)
     if m: return m.group(1), '科技人物'
     return None, None
 def is_chinese_text(t):
