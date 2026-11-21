@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test publisher metadata enrichment for 48-hour leader reports.
+# Test bounded Chinese translation fallback and publisher summary enrichment.
