@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Diagnose selected news and leader items missing independent summaries.
+# Validate AI leader summaries before candidate selection.
