@@ -604,26 +604,26 @@ def relevant_ai_news(row):
                  'ai model','robotics','robot')
     return any(word in title for word in direct_ai) or bool(re.search(r'(?<![a-z])ai(?![a-z])',title))
 
-US_PRIMARY_SOURCES = (
-    'reuters', 'associated press', 'ap news', 'techcrunch', 'the verge',
+INTERNATIONAL_PRIMARY_SOURCES = (
+    'reuters', 'associated press', 'ap news', 'bloomberg', 'bbc', 'financial times', 'the guardian', 'techcrunch', 'the verge',
     'wired', 'ars technica', 'mit technology review', 'mit news',
     'ieee spectrum', 'bloomberg', 'venturebeat', 'engadget',
     'openai', 'google', 'deepmind', 'microsoft', 'nvidia',
     'meta', 'github', 'hugging face', 'cloudflare'
 )
-def us_primary_source(row):
+def international_primary_source(row):
     source = row.get('source', '').lower()
-    return any(name in source for name in US_PRIMARY_SOURCES)
+    return any(name in source for name in INTERNATIONAL_PRIMARY_SOURCES)
 
 ready_pool = sorted(
     [r for r in news + domestic + direct_news + international_news + site_news
      if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],
-    key=lambda r: (us_primary_source(r), score(r), valid_description(r)),
+    key=lambda r: (international_primary_source(r), score(r), valid_description(r)),
     reverse=True
 )
 new_selection = []
-# 先从美国主流媒体和美国AI机构挑选最多3条，再用其他可靠媒体补齐。
-for pool, target in (([r for r in ready_pool if us_primary_source(r)], 3), (ready_pool, 4)):
+# 国际主流媒体和AI机构优先填满4条，只有不足时才由国内媒体补齐。
+for pool, target in (([r for r in ready_pool if international_primary_source(r)], 4), (ready_pool, 4)):
     for r in pool:
         if r['key'] in {x['key'] for x in new_selection}: continue
         if any(similar(r['title'], x['title']) for x in new_selection): continue
@@ -636,7 +636,7 @@ if len(new_selection)<4:
         if r['key'] not in {x['key'] for x in new_selection} and not any(similar(r['title'],x['title']) for x in new_selection):
             new_selection.append(r)
         if len(new_selection)==4: break
-print('美国主流来源入选:',sum(us_primary_source(r) for r in new_selection),'/',len(new_selection))
+print('国际主流来源入选:',sum(international_primary_source(r) for r in new_selection),'/',len(new_selection))
 if len(new_selection)<4:
     report = {
         'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
