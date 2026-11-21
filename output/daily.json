@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "Genesys launches standal…",
-    "body": "据Outsource Accelerator报道：Genesys launches standalone AI agents and effort-based pricing。",
-    "source": "Outsource Accelerator"
+    "title": "Sakana Applied Research …",
+    "body": "据explainx.ai报道：Sakana Applied Research Lab: Finance AI Agents (2026)。",
+    "source": "explainx.ai"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "苹果悄然布局AI Agent，Meta …",
-      "body": "据华尔街见闻报道：苹果悄然布局AI Agent，Meta Muse迎来新对手。",
-      "source": "华尔街见闻"
+      "title": "苹果组建团队研发自主AI智能体 最早20…",
+      "body": "据Sohu报道：苹果组建团队研发自主AI智能体 最早2027年底推出 可跨应用完成多步骤任务。",
+      "source": "Sohu"
     },
     {
       "tag": "产品应用",
-      "title": "TestSprite 4.0 Launc…",
-      "body": "据ACCESS Newswire报道：TestSprite 4.0 Launches Independent AI Testing Agent。",
-      "source": "ACCESS Newswire"
+      "title": "Microsoft adds contr…",
+      "body": "据Superpower Daily报道：Microsoft adds controls for third-party and local AI a…",
+      "source": "Superpower Daily"
     },
     {
       "tag": "前沿科技",
-      "title": "南京大学团队研发AI多智能体协同系统 瞄…",
-      "body": "据Sohu报道：南京大学团队研发AI多智能体协同系统 瞄准港股破发预警。",
-      "source": "Sohu"
+      "title": "FalsifyAgent：基于逆向溯因重…",
+      "body": "据生物通报道：FalsifyAgent：基于逆向溯因重构与对抗协同演化的科学智能体可信赖性验证框架。",
+      "source": "生物通"
     }
   ],
   "leaders": [
     {
-      "name": "黄仁勋｜英伟达CEO",
-      "title": "重磅！黄仁勋正式辞任英伟达CEO、女CFO紧…",
-      "body": "据FX168财经报道：重磅！黄仁勋正式辞任英伟达CEO、女CFO紧急接班！2万亿美元市值蒸发，AI帝国将何去何从？。",
-      "source": "FX168财经"
+      "name": "科技动态｜媒体报道",
+      "title": "广东文化“爆款”频出背后：AI重塑产业边界",
+      "body": "广东文化“爆款”频出背后：AI重塑产业边界",
+      "source": "21财经"
     },
     {
       "name": "科技动态｜媒体报道",
-      "title": "活动报名｜量子位「MEET2027智能未来大…",
-      "body": "活动报名｜量子位「MEET2027智能未来大会」重磅嘉宾阵容公布！",
-      "source": "智源社区"
+      "title": "深耕精品树内容旗舰，四川聚力AI漫剧出海“下…",
+      "body": "深耕精品树内容旗舰，四川聚力AI漫剧出海“下半场”",
+      "source": "川观新闻"
     },
     {
       "name": "科技动态｜媒体报道",
-      "title": "硅谷争议人物达里奥探索AI伦理与发展方向",
-      "body": "硅谷争议人物达里奥探索AI伦理与发展方向",
-      "source": "VanPeople"
+      "title": "林俊旸离开阿里巴巴创业 语用科技估值升至50…",
+      "body": "林俊旸离开阿里巴巴创业 语用科技估值升至50亿美元",
+      "source": "KLSE Screener"
     }
   ]
 }
