@@ -363,7 +363,19 @@ if len(new_selection)<4:
         if r['key'] not in {x['key'] for x in new_selection} and not any(similar(r['title'],x['title']) for x in new_selection): new_selection.append(r)
         if len(new_selection)==4: break
 if len(new_selection)<4:
-    raise RuntimeError('中文新闻不足4条：拒绝输出英文残缺标题，请检查新闻源与翻译服务')
+    report = {
+        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
+        'reason': f'具备独立摘要的中文新闻仅{len(new_selection)}/4条',
+        'news_candidates': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description',''))[:240],
+             'has_independent_summary': valid_description(r), 'score': score(r)}
+            for r in sorted(news + domestic + direct_news + international_news, key=score, reverse=True)[:40]
+        ],
+        'note': '待人工审阅，不得直接作为正式新闻发布。'
+    }
+    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
+    raise RuntimeError('独立摘要中文新闻不足4条：已保存候选报告，停止出图')
 news = new_selection
 
 # 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
