@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test headline-based AI news briefs without blocking PNG generation on RSS summaries.
+# Test update-card text fit with the fixed daily poster template.
