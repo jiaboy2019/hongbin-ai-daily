@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Re-test after removing duplicated trailing Python source.
+# Test clean full-sentence headlines and body without publisher boilerplate.
