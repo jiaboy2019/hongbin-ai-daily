@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test concise complete headlines without ellipsis truncation.
+# Test clean news bodies without redundant media-attribution phrases.
