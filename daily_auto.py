@@ -391,7 +391,7 @@ def publishable_title(row, limit=22):
     title = short_headline(row['title'], limit)
     if title in ('人工智能领域出现新进展','OpenAI发布AI新进展','Anthropic发布AI新进展','Google发布AI新进展','Meta发布AI新进展','英伟达公布AI相关动态'):
         return False
-    if any(x in title for x in ('公布AI相关动态','发布AI新进展','高考','违规考生','数学问题','数学突破','价格已在网上泄露','完美风暴','预测翻转')):
+    if any(x in title for x in ('公布AI相关动态','发布AI新进展','高考','违规考生','数学问题','数学突破','价格已在网上泄露','完美风暴','预测翻转','开始赚AI的钱','算力供给承压','折叠方向盘','AI领路人','奇点的看法','营收目标')):
         return False
     # Reject slogans and unmatched quotation marks before they reach the poster.
     if any(x in title for x in ('·生态共融','具身智创','AI教母','短板变成爆品','活力和雄心')):
