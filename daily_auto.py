@@ -156,11 +156,12 @@ people = [
 # 人物动态必须有可归属的科技信息；媒体标题仅提到姓名不足以入选。
 LEADER_BLOCK = ('离职', '离任', '辞任', '辞职', '去世', '逝世', '遇刺', '被捕', '间谍', '战争', '导弹', '政治通牒', '爆料', '首谈', '传闻', '谣言', '阴谋', '曝', '被曝', '震惊', '特朗普', '股价', '股市', '投资机会', '官司', '起诉', '拟募资', '再创业', '神话破裂', '行业又要变天', '或将', '据传', '网曝', '疑似')
 LEADER_TECH = ('人工智能', 'AI', '模型', '机器人', '芯片', '科研', '研究', '论文', '技术', '智能体', '算法', '开源', '发布', '产品', '编程', '算力', '计算', '自动驾驶', '世界模型', '具身智能', 'agent')
-LEADER_BAD_SOURCES = ('禁闻', '搜狐', 'sohu', '驱动之家', 'x', 'twitter', '东方财富', '股吧', '自媒体')
+LEADER_BAD_SOURCES = ('禁闻', '搜狐', 'sohu', '驱动之家', '东方财富', '股吧', '自媒体')
 def leader_valid(row):
     title = row['title']; source = row['source'].lower()
     return (not any(w in title for w in LEADER_BLOCK)
             and any(w.lower() in title.lower() for w in LEADER_TECH)
+            and source not in ('x', 'twitter', 'x.com', 'twitter.com')
             and not any(w.lower() in source for w in LEADER_BAD_SOURCES))
 
 leaders, selected, leader_names = [], [], []
