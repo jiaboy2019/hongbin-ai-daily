@@ -227,7 +227,7 @@ def direct_feed_rows(max_age_hours=18):
                 if not link:
                     atom_link = item.find('atom:link', ns)
                     if atom_link is not None: link = atom_link.attrib.get('href','')
-                row = {'title':title,'source':source,'key':norm(title),'description':description,'article_url':link}
+                row = {'title':title,'source':source,'key':norm(title),'description':description,'article_url':link,'age_hours':age/3600}
                 if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p['title']) for p in state['items'][-100:]):
                     result.append(row); count+=1
             print('独立源:',source,count)
@@ -379,8 +379,9 @@ people = [
 # 开放式人物候选：从新闻报道本身识别人名；上面的名单仅作补充，不是准入限制。
 leaders, selected, leader_names = [], [], []
 leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '科技公司 CEO AI', '机器人 创始人 表示', 'AI 研究者 发布', '科技人物 人工智能']
-direct_news = direct_feed_rows(max_age_hours=18)
+# 直接 RSS 只抓取一次48小时窗口，再按新闻18小时过滤，避免重复请求30个源。
 leader_direct_news = direct_feed_rows(max_age_hours=48)
+direct_news = [r for r in leader_direct_news if r.get('age_hours', 999) <= 18]
 leader_rows = gather(leader_queries, leader=True)
 # 直接媒体 RSS 自带事实摘要，优先补充其中真正涉及具体人物的报道。
 leader_rows += [r for r in leader_direct_news if valid_description(r)]
