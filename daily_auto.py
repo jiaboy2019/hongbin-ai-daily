@@ -488,6 +488,14 @@ for candidate in leader_rows:
         person_samples.append({'name':candidate_name,'title':candidate['title'][:85],
             'source':candidate.get('source',''), 'has_description':valid_description(candidate),
             'score':score(candidate)})
+print('人物合格候选明细:', json.dumps([
+    {'name':identify_person(r['title'])[0], 'title':r['title'][:110],
+     'source':r.get('source',''), 'description_ok':valid_description(r),
+     'excluded_word':next((w for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\\u2019t','科技早报','或将','传闻') if w in r['title'].lower()), ''),
+     'has_ai':relevant_ai_person_event(r['title']+' '+r.get('description',''))}
+    for r in leader_rows if identify_person(r['title'])[0] and eligible_person_report(r)
+    and is_chinese_text(r['title'])
+][:25], ensure_ascii=False))
 print('人物候选诊断:', json.dumps(person_rejections, ensure_ascii=False))
 print('人物被排除样本:', json.dumps(person_samples, ensure_ascii=False))
 for r in sorted(leader_rows, key=score, reverse=True):
