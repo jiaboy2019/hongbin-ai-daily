@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Diagnose the remaining distinct-person selection bottleneck without loosening factual standards.
+# Test named AI researcher interviews and engineering discussion headline selection.
