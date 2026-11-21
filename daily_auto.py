@@ -353,9 +353,19 @@ def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
 
 def short_headline(raw, limit=22):
-    """Short, complete headline; never cut a title mid-word or add ellipsis."""
+    """Prefer a complete short clause, never truncate a headline with ellipsis."""
     title = to_chinese(raw).strip()
-    title = re.sub(r'\\s*[-–—]\\s*(?:IT之家|36氪|量子位|机器之心|OSCHINA|开源中国|新浪科技|腾讯新闻).*
+    title = re.split(r'\\s+[-–—|｜]\\s+', title)[0].strip()
+    title = title.rstrip('。！？!?')
+    if len(title) <= limit:
+        return title
+    clauses = re.split(r'[，,；;。！？!?：:]', title)
+    for clause in clauses:
+        clause = clause.strip(' “”“‘’')
+        if 6 <= len(clause) <= limit and not clause.endswith(('将','称','表示','推出','发布')):
+            return clause
+    return title
+
 people = [
     ('黄仁勋', '英伟达CEO'), ('奥尔特曼', 'OpenAI CEO'),
     ('苏姿丰', 'AMD CEO'), ('纳德拉', '微软CEO'),
