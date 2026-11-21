@@ -490,7 +490,7 @@ for r in sorted(leader_rows, key=score, reverse=True):
     if not is_chinese_text(r['title']): continue
     # 仅标题可核验时，以标题事实形成简讯，不冒充原文独立摘要。
     if not valid_description(r):
-        r = dict(r, description='据'+r['source']+'报道：'+r['title']+'。')
+        r = dict(r, headline_only_person=True)
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
@@ -592,9 +592,13 @@ news = new_selection
 # 未达标时工作流失败，不覆盖已发布的正式成品。
 UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\d+)?')
 def valid_summary(row):
-    desc = tidy(row.get('description', ''))
-    title = tidy(row['title'])
-    return valid_description(row)
+    if valid_description(row): return True
+    # 标题简讯只用于人物栏目：明确标记、真实姓名、中文事实与AI相关性。
+    # 不把重复标题伪装成独立摘要，也不放宽普通新闻标准。
+    return bool(row.get('headline_only_person')
+                and identify_person(row['title'])[0]
+                and eligible_person_report(row)
+                and len(re.findall('[一-鿿]', row['title'])) >= 14)
 
 if len(leaders) != 3:
     # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
