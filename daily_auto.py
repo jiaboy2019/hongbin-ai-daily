@@ -13,6 +13,9 @@ TODAY = dt.datetime.now(ZoneInfo('Asia/Shanghai')).date()
 HISTORY = ROOT / 'published_history.json'
 state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
 old = {x['key'] for x in state['items']}
+# 同一天重跑时不自动增加期号，避免测试造成跳号。
+last_dates = [x.get('date') for x in state['items']]
+SAME_DAY = TODAY.isoformat() in last_dates[-7:]
 
 # 仅调整新闻筛选；原网页模板、图标、画布与栏目布局均保持不变。
 EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词')
@@ -20,7 +23,8 @@ SIGNALS = ('发布', '推出', '上线', '开源', '突破', '模型', '机器�
 def score(row):
     title = row['title']
     if any(w in title for w in EXCLUDE): return -100
-    return sum(3 for w in SIGNALS if w.lower() in title.lower()) + (1 if len(title) <= 45 else 0)
+    matches = sum(3 for w in SIGNALS if w.lower() in title.lower())
+    return matches + (1 if len(title) <= 45 else 0) if matches else -20
 
 def similar(a, b):
     # 使用字符三元组发现换标题的近似重复事件；并非完整语义去重。
@@ -85,7 +89,7 @@ for name, role in people:
     found = [r for r in gather([name + ' 人工智能']) if name in r['title']]
     if found:
         r = sorted(found, key=score, reverse=True)[0]
-        leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip('据' + r['source'] + '报道：' + r['title'], 45), 'source': r['source']})
+        leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
         selected.append(r)
     if len(leaders) == 3:
         break
@@ -95,11 +99,11 @@ news = [r for r in gather(['人工智能 最新 技术', 'AI 大模型 应用', 
 if len(news) < 4 or len(leaders) < 3:
     raise RuntimeError('今日新闻不足以填满固定栏目，停止生成，避免发布占位内容')
 news = sorted(news, key=score, reverse=True)[:4]
-issue = str(int(state.get('last_issue', 2)) + 1).zfill(3)
+issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
-    'headline': {'title': clip(news[0]['title'], 25), 'body': clip('据' + news[0]['source'] + '报道：' + news[0]['title'], 55), 'source': news[0]['source']},
-    'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': clip('据' + r['source'] + '报道：' + r['title'], 53), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
+    'headline': {'title': clip(news[0]['title'], 25), 'body': clip(news[0]['title'], 55), 'source': news[0]['source']},
+    'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': clip(r['title'], 53), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders,
 }
 (OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
@@ -131,6 +135,7 @@ with sync_playwright() as p:
     png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
     (OUT / '洪滨每日AI早报.png').write_bytes(base64.b64decode(png))
     browser.close()
+    server.shutdown()
 state['last_issue'] = int(issue)
 state['items'] = (state['items'] + [{'key': r['key'], 'title': r['title'], 'date': TODAY.isoformat()} for r in news + selected])[-500:]
 HISTORY.write_text(json.dumps(state, ensure_ascii=False, indent=2), 'utf-8')
