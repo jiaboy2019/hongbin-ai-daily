@@ -553,7 +553,22 @@ def is_chinese_ready(row):
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
-ready_pool = sorted([r for r in news + domestic + direct_news + international_news + site_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
+def relevant_ai_news(row):
+    """普通新闻必须直接讲AI技术、AI产品或AI应用，不能仅因提到AI市场预期入选。"""
+    title = row['title'].lower()
+    excluded = ('锡价','铜价','铝价','关税','跨境包裹','插混','燃油','混动','显卡驱动',
+                'geforce hotfix','game ready','股价','股票','债券','基金','汇率','楼市',
+                '房地产','融资轮','估值','价格暴跌','商品期货')
+    if any(word in title for word in excluded): return False
+    direct_ai = ('人工智能','大模型','语言模型','世界模型','智能体','ai应用','ai工具',
+                 'ai模型','ai助手','ai芯片','ai机器人','机器人','机器学习',
+                 '深度学习','生成式ai','生成式人工智能','deepseek','chatgpt',
+                 'openai','anthropic','gemini','grok','claude','llm','agent',
+                 'artificial intelligence','machine learning','ai agent',
+                 'ai model','robotics','robot')
+    return any(word in title for word in direct_ai) or bool(re.search(r'(?<![a-z])ai(?![a-z])',title))
+
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news + site_news if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
