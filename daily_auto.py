@@ -68,6 +68,16 @@ def similar(a, b):
 def tidy(s):
     return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', s or ''))).strip()
 
+def valid_description(row):
+    desc = tidy(row.get('description', ''))
+    title = tidy(row.get('title', ''))
+    if len(desc) < 25: return False
+    if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
+    if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
+    if len(re.sub(r'[^A-Za-z\u4e00-\u9fff]', '', desc)) < 22: return False
+    return True
+
+
 def norm(s):
     return hashlib.sha256(re.sub(r'[^\w\u4e00-\u9fff]', '', s.lower()).encode()).hexdigest()[:20]
 
@@ -300,7 +310,7 @@ def is_chinese_text(t):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    if score(r)<8 or not editorial_eligible(r): continue
+    if score(r)<8 or not editorial_eligible(r) or not valid_description(r): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
     if not is_chinese_text(r['title']): continue
@@ -312,7 +322,7 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8: continue
+        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8 or not valid_description(r): continue
         if not any(w in r['title'].lower() for w in ('ai','人工智能','模型','机器人','芯片','智能体','科研','发布','技术','agent','robot')): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
@@ -346,14 +356,6 @@ def is_chinese_ready(row):
     return len(re.findall('[一-鿿]', t)) >= 8 and len(re.findall(r'[A-Za-z]', t)) <= len(t)*0.55
 
 # 先筛真正具有独立事实信息的摘要，再按新闻价值评分；Google News 标题列表不能算摘要。
-def valid_description(row):
-    desc = tidy(row.get('description', ''))
-    title = tidy(row.get('title', ''))
-    if len(desc) < 25: return False
-    if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
-    if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
-    if len(re.sub(r'[^A-Za-z\u4e00-\u9fff]', '', desc)) < 22: return False
-    return True
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
