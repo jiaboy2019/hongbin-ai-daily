@@ -544,9 +544,15 @@ def person_specific_story(row, name):
     # 姓名必须与该条AI事实在同一主题内，而非仅被顺带提及。
     return name.lower() in title.lower()
 
+# Normalize bilingual names so the same person cannot occupy two slots.
+PERSON_ALIASES = {'Jensen Huang':'黄仁勋','Satya Nadella':'纳德拉','Sam Altman':'奥尔特曼',
+                  'Dario Amodei':'阿莫迪','Elon Musk':'马斯克','Sundar Pichai':'皮查伊',
+                  'Demis Hassabis':'哈萨比斯','Fei-Fei Li':'李飞飞'}
+def person_key(name):
+    return PERSON_ALIASES.get(name, name).casefold()
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
-    if not name or name in leader_names: continue
+    if not name or person_key(name) in {person_key(n) for n in leader_names}: continue
     if not eligible_person_report(r) or not person_specific_story(r, name): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
@@ -562,7 +568,7 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示', 'AI 教师 表示', 'AI 医生 介绍', 'AI 工程师 研发', '人工智能 教授 指出', '机器人 创业者 分享', 'AI 设计师 应用'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names or not is_chinese_text(r['title']) or not eligible_person_report(r) or not person_specific_story(r, name): continue
+        if not name or person_key(name) in {person_key(n) for n in leader_names} or not is_chinese_text(r['title']) or not eligible_person_report(r) or not person_specific_story(r, name): continue
         if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
         if not valid_description(r):
             r = dict(r, headline_only_person=True)
@@ -630,12 +636,14 @@ def quality_gate(row):
     if any(x in source for x in ('风闻','财富号','金十','tempo.co','techgig','www.itsdw','中华网')):
         return False
     raw = row.get('title','').lower()
+    if any(x in raw for x in ('vacation','resort','holiday','ipo','listed','million dollars','billion dollars','investor','fundraising','funding','market nervous','market jitters','math breakthrough','mathematical breakthrough')):
+        return False
     if any(x in raw for x in ('retail investor','stock','shares','trading','trade','metal','copper',
                                'riemann','mathematical hypothesis','film trailer','movie poster',
                                'price plunge','selloff','financial market')):
         return False
     chinese = to_chinese(row['title'])
-    if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想')):
+    if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想','度假村','度假','上市后','数学突破')):
         return False
     if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','人工智能','模型','机器人','芯片','智能体')):
         return False
