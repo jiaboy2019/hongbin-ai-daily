@@ -280,10 +280,12 @@ leader_rows += gather(['奥尔特曼 人工智能 发布', '黄仁勋 人工智�
 # 把已有名单中的名字作为识别提示，同时识别新闻标题中的中文姓名和英文姓名。
 name_roles = dict(people)
 def identify_person(title):
-    # 新闻站点常把人名塞在 URL/SEO 标签后缀，不能当作人物报道。
+    # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
     title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
-    title = re.sub(r'_[^\s]*新浪新闻.*
-        if re.search(r'(?<![A-Za-z])'+re.escape(name)+r'(?![A-Za-z])',title,re.I): return name, role
+    title = re.sub(r'_[^\\s]*新浪新闻.*$', '', title)
+    for name, role in name_roles.items():
+        if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
+            return name, role
     m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
     if m: return m.group(1), '科技人物'
     m = re.search(r'^([\\u4e00-\\u9fff]{2,4})[：称说表示认为谈]', title)
