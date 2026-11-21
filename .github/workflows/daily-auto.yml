@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test relevance and reject generic or irrelevant headlines.
+# Test translation quality gate and mainstream international source filtering.
