@@ -181,7 +181,31 @@ news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器�
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4 or len(leaders) < 3:
     raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
-news = sorted(news, key=score, reverse=True)[:4]
+# 先在候选中找得到明确主体配图的新闻，而不是先选4条再因缺图失败。
+# 同时排除同一事件的近似标题，避免四个图片槽位重复。
+image_cache = {}
+illustrated = []
+for candidate in sorted(news, key=score, reverse=True)[:80]:
+    if any(similar(candidate['title'], chosen['title']) for chosen in illustrated):
+        continue
+    title = candidate['title']
+    matches = [(word, page) for word, page in NEWS_IMAGE_PAGES if word.lower() in title.lower()]
+    if not matches:
+        continue
+    uri = None
+    for word, page in matches:
+        if page not in image_cache:
+            image_cache[page] = fetch_wiki_thumbnail(page)
+        if image_cache[page]:
+            uri = image_cache[page]
+            break
+    if uri:
+        illustrated.append(candidate)
+    if len(illustrated) == 4:
+        break
+if len(illustrated) != 4:
+    raise RuntimeError(f'80条候选中仅{len(illustrated)}/4条有匹配配图，停止出图')
+news = illustrated
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
