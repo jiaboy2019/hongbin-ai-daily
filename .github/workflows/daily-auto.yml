@@ -19,7 +19,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；测试新闻相关示意配图自动填入原模板，同时验证人物照片与地球图标
+    # 使用固定母版进行完整出图验收；修复库克等科技人物肖像映射并复测完整出图
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
