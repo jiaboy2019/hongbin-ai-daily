@@ -369,6 +369,12 @@ if len(leaders) != 3:
         'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
         'reason': f'科技人物仅{len(leaders)}/3条',
         'verified_person_candidates': leaders,
+        'person_search_candidates': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description',''))[:240],
+             'score': score(r), 'recognized_person': identify_person(r['title'])[0]}
+            for r in sorted(leader_rows, key=score, reverse=True)[:35]
+        ],
         'news_candidates': [
             {'title': r['title'], 'source': r['source'],
              'description': tidy(r.get('description',''))[:240], 'score': score(r)}
