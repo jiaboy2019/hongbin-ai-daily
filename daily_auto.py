@@ -8,13 +8,14 @@ from pathlib import Path
 from argparse import ArgumentParser
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 import os
 from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parent
 BEIJING = dt.timezone(dt.timedelta(hours=8))
 NEWS_HOURS = 18
-PERSON_HOURS = 168
+PERSON_HOURS = 48
 NOW = dt.datetime.now(dt.timezone.utc)
 HISTORY = ROOT / 'published_history.json'
 
@@ -22,7 +23,6 @@ HISTORY = ROOT / 'published_history.json'
 # 仅调整新闻筛选；原网页模板、图标、画布与栏目布局均保持不变。
 EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词', '培训', '培训机构', '横向测评', '辞职', '利润翻倍', '亏超', '新媒体创作', '课程体系', '技能培训班', '抵押的AI芯片')
 SIGNALS = ('发布', '推出', '上线', '开源', '突破', '模型', '机器人', '芯片', '智能体', 'Agent', '研发', '科研', '应用', '功能', '升级', '世界模型', '编程', '自动化', 'AI', 'artificial intelligence', 'robot', 'chip', 'research', 'launch', 'model', 'agent', 'breakthrough')
-TRUSTED_SOURCES = ('Reuters','Associated Press','AP News','Bloomberg','Financial Times','新华','人民网','中新网','TechCrunch','The Verge','MIT Technology Review','Ars Technica','IEEE Spectrum','机器之心','量子位','智东西','36氪','钛媒体','Hugging Face','OpenAI','Google DeepMind','Anthropic','NVIDIA','Microsoft','Nature','Science','The Decoder','MIT News')
 MAJOR_ACTORS = ('openai','anthropic','deepmind','google','microsoft','nvidia','meta','apple','deepseek','xai','mistral','hugging face','英伟达','谷歌','微软','苹果','阿里','腾讯','华为','字节','百度','宇树','智元')
 SUBSTANTIVE = ('重大突破','首次','全球首','新一代','发布','推出','开源','突破','训练','上线','收购','部署','商用','launch','released','unveils','announces','breakthrough','open-source','deploy','introduces','rolls out')
 LOW_VALUE = ('昨夜今晨','早报汇总','科技早报','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手','心理困扰','关联机制','中介作用','调节效应','三年行动方案','五张清单','地方出台','研讨会','论坛','或将','传闻','rumor','rumour')
@@ -49,7 +49,6 @@ def score(row):
     if len(title) > 100: return -30
     points = 0
     if re.search(r'(?<![a-z])ai(?![a-z])', low) or any(w.lower() in low for w in ('人工智能','大模型','机器人','芯片','智能体','agent','模型','robot','chip','llm')): points += 5
-    if any(w.lower() in source.lower() for w in TRUSTED_SOURCES): points += 9
     if any(w in low for w in MAJOR_ACTORS): points += 12
     if any(w in low for w in SUBSTANTIVE): points += 12
     if any(w in low for w in ('科研突破','重大突破','全球首','新一代','新模型','开源模型','机器人量产','world model','世界模型')): points += 7
@@ -89,13 +88,14 @@ def norm(s):
 
 def search(q, leader=False, international=False):
     params = urllib.parse.urlencode({
-        'q': q + (' when:7d' if leader else ' when:1d'),
+        'q': q + (' when:2d' if leader else ' when:1d'),
         'hl': 'en-US' if international else 'zh-CN', 'gl': 'US' if international else 'CN',
         'ceid': 'US:en' if international else 'CN:zh-Hans',
     })
     root = ET.fromstring(fetch('https://news.google.com/rss/search?' + params))
     rows = []
-    for item in root.findall('.//item'):
+    entries = root.findall('.//item')
+    for item in entries[:8]:
         title = tidy(item.findtext('title'))
         publisher = item.find('source')
         if publisher is None:
@@ -106,16 +106,18 @@ def search(q, leader=False, international=False):
         links = [html.unescape(u) for u in re.findall(r"""href=["'](https?://[^"']+)""", desc)]
         publisher_host = host(publisher.get('url', ''))
         link = next((u for u in links if publisher_host and domain_matches(host(u), publisher_host)), '')
-        row = candidate(title, link, item.findtext('pubDate'), '', 'Google News')
+        meta = publisher_article(link) if link else None
+        row = candidate(meta[0], link, meta[1], meta[2], 'Google News') if meta else None
         if row and in_window(row, PERSON_HOURS if leader else NEWS_HOURS):
             rows.append(row)
-    return rows
+    return rows, len(entries)
 
 
 class ArticleMetadata(HTMLParser):
     def __init__(self):
         super().__init__()
         self.meta = {}
+        self.links = []
 
     def handle_starttag(self, tag, attrs):
         if tag == 'meta':
@@ -123,29 +125,52 @@ class ArticleMetadata(HTMLParser):
             key = values.get('property') or values.get('name')
             if key and values.get('content'):
                 self.meta[key.lower()] = values['content']
+        elif tag == 'a':
+            url = dict(attrs).get('href')
+            if url:
+                self.links.append(url)
 
 
 def article_meta_summary(url):
+    article = publisher_article(url)
+    return article[2] if article else ''
+
+
+@lru_cache(maxsize=256)
+def publisher_article(url):
     source = publisher_for(url)
     if not source:
-        return ''
+        return None
     try:
         req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=4) as resp:
             redirect_source = publisher_for(resp.geturl())
             if not redirect_source or redirect_source['name'] != source['name']:
-                return ''
-            page = resp.read(350_000).decode('utf-8', 'ignore')
+                return None
+            page = resp.read(450_000).decode(resp.headers.get_content_charset('utf-8'), 'replace')
         parser = ArticleMetadata()
         parser.feed(page)
-        return tidy(parser.meta.get('og:description') or parser.meta.get('description'))[:600]
-    except (OSError, ValueError) as exc:
-        print('原文摘要获取失败:', source['name'], str(exc)[:65])
-    return ''
+        meta = parser.meta
+        title = tidy(meta.get('og:title') or meta.get('twitter:title') or meta.get('title'))
+        date = next((meta[k] for k in ('article:published_time', 'og:published_time', 'pubdate',
+                                      'publishdate', 'datepublished', 'dc.date.issued') if meta.get(k)), '')
+        if not date:
+            match = re.search(r'"datePublished"\s*:\s*"([^"]+)"', page)
+            date = match[1] if match else ''
+        if date and not parse_date(date) and source.get('region') == 'CN':
+            # Domestic publishers sometimes omit the zone from a full local timestamp.
+            if re.fullmatch(r'\d{4}-\d\d-\d\d[T ]\d\d:\d\d(?::\d\d)?', date):
+                date += '+08:00'
+        description = tidy(meta.get('og:description') or meta.get('description'))[:600]
+        return title, date, description
+    except (OSError, ValueError, LookupError):
+        return None
 
 
-SOURCE_REGISTRY = json.loads((ROOT / 'news_sources.json').read_text('utf-8'))['sources']
-FEEDS = [source for source in SOURCE_REGISTRY if source['type'] in ('rss', 'atom')]
+SOURCE_CONFIG = json.loads((ROOT / 'news_sources.json').read_text('utf-8'))
+SOURCE_REGISTRY = SOURCE_CONFIG['sources']
+DISCOVERY = {source['name']: source for source in SOURCE_REGISTRY if source['category'] == 'discovery'}
+PUBLISHERS = [source for source in SOURCE_REGISTRY if source['category'] != 'discovery']
 
 def fetch(url, accept=None, timeout=8):
     headers = {'User-Agent': 'Mozilla/5.0 (compatible; HongbinDaily/1.0)'}
@@ -182,10 +207,11 @@ def canonical_url(url):
 def publisher_for(url):
     hostname = host(url)
     path = urllib.parse.urlsplit(url).path.lower()
-    for source in SOURCE_REGISTRY:
+    for source in PUBLISHERS:
         domain = source.get('domain', host(source['url']))
         prefix = source.get('path_prefix')
-        if domain and domain_matches(hostname, domain) and (not prefix or path.startswith(prefix)):
+        domains = [domain, *source.get('domain_aliases', [])]
+        if any(expected and domain_matches(hostname, expected) for expected in domains) and (not prefix or path.startswith(prefix)):
             return source
     return None
 
@@ -203,7 +229,7 @@ def parse_date(value):
     return result.astimezone(dt.timezone.utc) if result.tzinfo else None
 
 
-def candidate(title, url, published, description, via, heat=0):
+def candidate(title, url, published, description, via):
     title = tidy(title)
     normalized_url = canonical_url(url)
     when = parse_date(published)
@@ -216,7 +242,7 @@ def candidate(title, url, published, description, via, heat=0):
         'age_hours': (NOW - when).total_seconds() / 3600,
         'description': tidy(description)[:600], 'discovered_via': via,
         'region': 'CN' if source.get('region') == 'CN' else 'international',
-        'official': bool(source.get('official')), 'heat': heat,
+        'category': source['category'],
     }
 
 
@@ -235,9 +261,6 @@ def direct_feed(source):
             link = next((x.get('href', '') for x in item.findall(f'{ns}link')
                          if x.get('rel', 'alternate') == 'alternate'), '')
         date = item.findtext('pubDate') or item.findtext(f'{ns}published')
-        # Atom only requires updated. For ordinary articles, an edit is not publication.
-        if not date and source.get('use_atom_updated'):
-            date = item.findtext(f'{ns}updated')
         description = (item.findtext('description') or item.findtext(f'{ns}summary')
                        or item.findtext(f'{ns}content') or '')
         row = candidate(item.findtext('title') or item.findtext(f'{ns}title'),
@@ -248,22 +271,85 @@ def direct_feed(source):
     return rows, len(entries)
 
 
+ARTICLE_LINK = re.compile(
+    r'/\d{4}/\d\d/|/20\d\d-\d\d-|/(?:posts?|articles?|news|research|blog|blogs|story|stories|updates|a)/[^/?#]{5,}'
+    r'|/\d{5,}\.(?:s?html)|/\d/\d{3}/\d{3}\.htm|/article-[^/]+|/(?:p|detail)/\d{5,}', re.I)
+
+
+def web_source(source, url=None):
+    listing = url or source['url']
+    parser = ArticleMetadata()
+    parser.feed(fetch(listing, timeout=6).decode('utf-8', 'replace'))
+    links = {}
+    article_pattern = re.compile(source['article_path'], re.I) if source.get('article_path') else ARTICLE_LINK
+    for href in parser.links:
+        link = urllib.parse.urljoin(listing, href)
+        normalized = canonical_url(link)
+        if normalized and publisher_for(link) == source and article_pattern.search(urllib.parse.urlsplit(link).path):
+            if normalized != canonical_url(listing):
+                links.setdefault(normalized, link)
+    if not links:
+        return [], 0
+    rows = []
+    for link in list(links.values())[:6]:
+        metadata = publisher_article(link)
+        if metadata:
+            title, date, description = metadata
+            row = candidate(title, link, date, description, 'web')
+            if row and in_window(row, PERSON_HOURS):
+                rows.append(row)
+    return rows, len(links)
+
+
+def hacker_news():
+    ids = json.loads(fetch(DISCOVERY['Hacker News']['url']))
+    item_base = 'https://hacker-news.firebaseio.com/v0/item/'
+    rows = []
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = [pool.submit(fetch, f'{item_base}{identifier}.json', timeout=4)
+                   for identifier in ids[:18] if type(identifier) is int]
+        for future in futures:
+            try:
+                item = json.loads(future.result()) or {}
+                link = item.get('url', '')
+                meta = publisher_article(link) if link and publisher_for(link) else None
+                row = candidate(meta[0], link, meta[1], meta[2], 'Hacker News') if meta else None
+                if row and in_window(row, PERSON_HOURS):
+                    rows.append(row)
+            except (OSError, ValueError):
+                continue
+    return rows, len(futures)
+
+
+def github_trending():
+    parser = ArticleMetadata()
+    parser.feed(fetch(DISCOVERY['GitHub Trending']['url']).decode('utf-8', 'replace'))
+    repositories = {href.lower() for href in parser.links if re.fullmatch(r'/[\w.-]+/[\w.-]+', href)}
+    rows = []
+    for source in PUBLISHERS:
+        if source['type'] != 'atom' or host(source['url']) != 'github.com':
+            continue
+        repo = urllib.parse.urlsplit(source['url']).path.removesuffix('/releases.atom').lower()
+        if repo in repositories:
+            discovered, _ = direct_feed(source)
+            rows.extend(dict(row, discovered_via='GitHub Trending') for row in discovered)
+    return rows, len(repositories)
+
+
 def parse_aihot_item(item):
     if not isinstance(item, dict) or not isinstance(item.get('links'), dict):
         return None
     title = next((item[k] for k in ('title', 'originalTitle') if isinstance(item.get(k), str) and item[k]), '')
     summary = item.get('summary')
-    heat = item.get('score')
     row = candidate(title, item['links'].get('original'), item.get('publishedAt'),
-                    summary if isinstance(summary, str) else '', 'AIHOT',
-                    min(100, max(0, heat)) if type(heat) is int else 0)
+                    summary if isinstance(summary, str) else '', 'AIHOT')
     if row and isinstance(item.get('originalTitle'), str):
         row['original_title'] = tidy(item['originalTitle'])
     return row
 
 
 def aihot_page_rows(mode, max_pages):
-    endpoint = 'https://aihot.news/api/v1/items'
+    endpoint = DISCOVERY['AIHOT']['url']
     rows, seen, cursors = [], set(), set()
     counts = Counter()
     errors = []
@@ -421,19 +507,23 @@ def clean_attribution(text):
     text = re.sub(r'^(?:报道称|消息称|媒体报道)[，,:：\s]+', '', text)
     return text.strip()
 
+def text_width(text):
+    return sum(0.55 if char.isascii() else 1 for char in text)
+
+
 def complete_excerpt(text, limit):
     """Never output a mechanically clipped sentence or an ellipsis."""
     text = clean_attribution(text).replace('…', '').replace('...', '')
     text = text.strip(' ，,；;：:')
-    if len(text) <= limit:
+    if text_width(text) <= limit:
         return text if text and not re.fullmatch(r'(?:\d{1,2}\s*月\s*\d{1,2}\s*日)?\s*消息[。.]?', text) else ''
     for sentence in re.split(r'(?<=[。！？!?])', text):
-        if 12 <= len(sentence.strip()) <= limit:
+        if len(sentence.strip()) >= 12 and text_width(sentence.strip()) <= limit:
             return sentence.strip()
     # Prefer a complete sentence or a short factual clause.
     for clause in re.split(r'[。！？!?；;，,]', text):
         clause = clause.strip()
-        if 8 <= len(clause) <= limit - 1 and not clause.endswith(('将','并','和','与','及','为','在','对','称','表示')):
+        if len(clause) >= 8 and text_width(clause) <= limit - 1 and not clause.endswith(('将','并','和','与','及','为','在','对','称','表示')):
             return clause + '。'
     return ''
 
@@ -441,18 +531,15 @@ def short_headline(raw, limit=22):
     """Produce a short, complete factual statement, never an unfinished title."""
     title = clean_attribution(to_chinese(raw)).rstrip('。！？!?')
     title = re.split(r'\s+[-–—|｜]\s+', title)[0].strip()
-    def fits(text):
-        return sum(0.55 if char.isascii() else 1 for char in text) <= limit
-
-    if fits(title) and not title.endswith(('将','并','和','与','及','为','在','对')):
+    if text_width(title) <= limit and not title.endswith(('将','并','和','与','及','为','在','对')):
         return title
-    clauses = re.split(r'[，,；;。！？!?：:]', title)
+    clauses = re.split(r'[，,；;。！？!?：:]|并(?=推出|发布|宣布|开放)', title)
     # Prefer the clause containing the actual AI event, not an introductory slogan.
     vague = ('面向先锋者','三年销售目标','从实验室走向工厂','反超','之后','新选择','完美风暴','价格泄露')
     actions = ('发布','推出','上线','开源','研发','落地','应用','训练','升级','部署','成立','合作','突破','进入','宣布','推出','采用')
     topics = ('AI','人工智能','模型','机器人','智能体','芯片','OpenAI','Claude','Gemini','华为','微软','谷歌','英伟达')
     candidates = [c.strip(' “”“‘’') for c in clauses]
-    candidates = [c for c in candidates[:1] if len(c) >= 7 and fits(c)
+    candidates = [c for c in candidates[:1] if len(c) >= 7 and text_width(c) <= limit
                   and not c.endswith(('将','并','和','与','及','为','在','对','称','表示','之后','之前'))
                   and not any(v in c for v in vague)]
     informative = [c for c in candidates if any(v in c for v in actions)
@@ -464,7 +551,7 @@ def short_headline(raw, limit=22):
     compressed = re.sub(r'(开源权重模型|开放权重模型)', '开源模型', compressed)
     compressed = re.sub(r'(发布|推出)(?:一款)?(?:可跑在|可运行在|可在)[^，。]{2,14}?的(?=开源模型|大模型|生成模型)', r'\1', compressed)
     compressed = re.sub(r'“[^”]{6,}”', '', compressed).strip(' ，,：:；;')
-    if len(compressed) >= 7 and fits(compressed) and not compressed.endswith(('将','并','和','与','及','为','在','对')):
+    if len(compressed) >= 7 and text_width(compressed) <= limit and not compressed.endswith(('将','并','和','与','及','为','在','对')):
         return compressed
     # Use an intentionally general but complete headline instead of cutting a claim mid-sentence.
     for actor in ('OpenAI','Anthropic','Google','微软','英伟达','Meta','苹果','华为','DeepSeek','阿里','腾讯','百度','宇树','NVIDIA'):
@@ -528,10 +615,13 @@ people = [
     ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
     ('Ian Buck', '英伟达高性能计算副总裁'),
     ('Yossi Matias', 'Google Research负责人'),
+    ('Robby Stein', 'Google搜索产品副总裁'),
+    ('Thibault Sottiaux', 'OpenAI产品负责人'),
 ]
 
 
 name_roles = dict(people)
+name_roles.update({person['name']: person['role'] for person in SOURCE_CONFIG['person_watchlist']})
 def identify_person(title):
     # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
     title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
@@ -628,7 +718,7 @@ def quality_gate(row):
     chinese = row['title']
     if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想','度假村','度假','上市后','数学突破','特朗普账户','捐款','美元资助','电影海报')):
         return False
-    if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','人工智能','模型','机器人','芯片','智能体')):
+    if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','llm','qwen','混元','人工智能','模型','机器人','芯片','智能体')):
         return False
     return True
 
@@ -714,19 +804,22 @@ def render_png(data, news, leader_names):
 
 
 EVENT_TERMS = (
-    ('release', r'发布|推出|上线|开放|开源|\breleas\w*|\blaunch\w*|\bunveil\w*|\bintroduc\w*'),
+    ('release', r'发布|推出|上线|登陆|开放|开源|\breleas\w*|\blaunch\w*|\bunveil\w*|\bintroduc\w*'),
     ('research', r'研究|论文|实验|突破|评测|基准|\bresearch\b|\bbenchmark\b|\bstudy\b'),
-    ('deployment', r'部署|接入|落地|应用于|用于|投入使用|\bdeploy\w*|\bintegrat\w*'),
+    ('deployment', r'部署|接入|集成|落地|应用于|用于|投入使用|\bdeploy\w*|\bintegrat\w*'),
     ('hardware', r'机器人|芯片|加速器|量产|\brobot\w*|\bchips?\b|\bgpus?\b'),
+    ('impact', r'请愿|就业|无障碍|课堂|消防|\bpetition\w*|\bfirefight\w*|\baccessibility\b'),
 )
 MODEL_TOKEN = re.compile(r'(?<![a-z0-9])(?:gpt|gemini|claude|qwen|deepseek|grok|kimi|glm|llama|inkling)'
                          r'[ -]?(?:[a-z]+[ -]+)?\d+(?:\.\d+)*[a-z]?(?![a-z0-9])', re.I)
 LOW_SUBSTANCE = re.compile(r'论坛|双店|门店|开业|展位|亮相.{0,10}(?:展|会)|参展|签约仪式|座谈|'
                            r'推广|软文|赞助内容|抽奖|福利券|\bsponsored\b|\bgiveaway\b', re.I)
 PERSON_ACTION = re.compile(r'发布|展示|证实|解释|指出|宣布|表示|提出|开源|分享|介绍|'
-                           r'\b(?:announc|publish|show|demonstrat|discuss|explain|say|said|present|launch|introduc|reveal)\w*', re.I)
+                           r'重申|邀请|透露|\b(?:announc|publish|show|demonstrat|discuss|explain|say|said|present|launch|introduc|reveal|reiterat)\w*', re.I)
 UNCONFIRMED = re.compile(r'未经证实|尚无证据|尚待验证|有传言|疑似|消息人士|爆料|泄露|援引招聘信息|'
                          r'\b(?:unverified|unconfirmed|rumou?r|allegedly|leak|ouster)\w*', re.I)
+MARKET_ONLY = re.compile(r'股价|股市|股票.{0,5}抛售|投资者|万亿估值|\bI\.?P\.?O\.?\b|'
+                         r'\b(?:shares|stocks?)\b.{0,30}\b(?:fall|drop|jump|soar|sell|trading)\w*', re.I)
 BRIEFING_ROLES = {'AI科学家', 'AI研究者', 'AI企业家', 'AI教育与研究者', '机器人研究者', '计算机科学家'}
 ROLE_CONTEXT = r'科学家|创始人|CEO|首席|教授|研究员|工程师|董事长|负责人|总裁|researcher|professor|founder|chief|engineer'
 
@@ -752,7 +845,7 @@ def duplicate_event(row, previous):
         # A distinct model version or a confirmed deployment following a release can advance a story.
         if models and earlier_models and models.isdisjoint(earlier_models):
             return False
-        if row['official'] and 'deployment' in current_events and 'deployment' not in earlier_events:
+        if row.get('category') == 'official' and 'deployment' in current_events and 'deployment' not in earlier_events:
             return False
         return True
     return bool(models & earlier_models and current_events & earlier_events & {'release', 'deployment'})
@@ -763,13 +856,20 @@ def blocked(row):
     lowered = text.lower()
     return (any(term in lowered for term in EDITORIAL_BLOCKLIST)
             or bool(LOW_SUBSTANCE.search(text) or UNCONFIRMED.search(text))
+            or bool(MARKET_ONLY.search(row.get('title', '')))
+            or bool(re.search(r'黎曼猜想|riemann hypothesis', text, re.I))
             or not editorial_eligible(row))
 
 
+PRACTICAL_IMPACT = re.compile(r'工作|教育|教学|就业|辅助|无障碍|医疗|普通用户|办公|开源|本地运行|'
+                              r'\b(?:workflows?|education|jobs?|accessibility|healthcare|open.weights)\b', re.I)
+
+
 def editorial_rank(row):
-    events = event_profile(row['title'])
-    return (score(row) + 10 * row['official'] + 5 * len(events)
-            + min(6, row['heat'] / 16) - min(12, row['age_hours'] / 16))
+    text = f"{row['title']} {row['description']}"
+    return (score(row) + 5 * len(event_profile(row['title']))
+            + 6 * bool(PRACTICAL_IMPACT.search(text)) + 4 * valid_description(row)
+            - row['age_hours'] / 4)
 
 
 def short_body(row, limit):
@@ -795,6 +895,8 @@ def enrich(row):
 def choose_people(rows, history):
     people_cards, selected, names = [], [], []
     for row in rows:
+        if not in_window(row, PERSON_HOURS):
+            continue
         name, role = identify_person(row['title'])
         story = row
         if not name or not PERSON_ACTION.search(row['title']):
@@ -803,9 +905,9 @@ def choose_people(rows, history):
             if lead_name in name_roles and PERSON_ACTION.search(lead):
                 name, role = lead_name, lead_role
                 story = {**row, 'title': lead}
-        action = PERSON_ACTION.search(story['title'])
         subject = story['title'].casefold().find(name.casefold()) if name else -1
-        if (not name or not action or subject < 0 or not 0 < action.start() - subject <= len(name) + 20
+        action = PERSON_ACTION.search(story['title'], subject + len(name)) if subject >= 0 else None
+        if (not name or not action or subject < 0 or action.start() - subject > len(name) + 20
                 or person_key(name) in {person_key(n) for n in names}
                 or blocked(row) or not eligible_person_report(story)
                 or not person_specific_story(story, name) or not PERSON_ACTION.search(story['title'])
@@ -816,10 +918,14 @@ def choose_people(rows, history):
             continue
         if role in BRIEFING_ROLES and not re.search(ROLE_CONTEXT, row['title'] + row['description'], re.I):
             continue
-        if not is_chinese_text(story['title']) or not publishable_title(story, 23):
-            continue
         body = short_body(row, 54)
         headline = short_headline(story['title'], 23)
+        if not (is_chinese_text(story['title']) and publishable_title(story, 23)
+                and PERSON_ACTION.search(headline)):
+            headline = short_headline(row['title'], 23)
+            if not (story is not row and is_chinese_text(row['title'])
+                    and publishable_title(row, 23) and event_profile(headline)):
+                continue
         if similar(headline, body):
             continue
         if not body:
@@ -829,6 +935,7 @@ def choose_people(rows, history):
             'name': name + '｜' + role, 'title': headline, 'body': body,
             'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
             'url': row['article_url'], 'discovered_via': row['discovered_via'],
+            'category': 'person', 'publisher': row['source'],
         })
         selected.append(row)
         names.append(name)
@@ -842,9 +949,12 @@ def choose_news(rows, history, people_rows):
     eligible = [r for r in rows if in_window(r, NEWS_HOURS) and not blocked(r)
                 and relevant_ai_news(r) and quality_gate(r) and event_profile(r['title'])]
     # Reserve one slot for each region when publishable, then prefer different publishers.
-    for region, distinct in [('international', True), ('CN', True)] + [(None, True)] * 4 + [(None, False)] * 4:
+    for index in range(9):
         if len(selected) == 4:
             break
+        region = ({'CN': 'international', 'international': 'CN'}[selected[0]['region']]
+                  if index == 1 and len(selected) == 1 else None)
+        distinct = index < 5
         for row in eligible:
             if region and row['region'] != region:
                 continue
@@ -857,7 +967,7 @@ def choose_news(rows, history, people_rows):
                 continue
             headline = short_headline(row['title'], title_limit)
             # Abbreviating a long headline must retain the technology and the event.
-            if not relevant_ai_news({'title': headline}) or not event_profile(headline):
+            if not event_profile(headline):
                 continue
             row = enrich(row)
             if blocked(row):
@@ -869,46 +979,100 @@ def choose_news(rows, history, people_rows):
                 'title': headline, 'body': body,
                 'source': row['source'], 'url': row['article_url'],
                 'published_at': row['published_at'], 'discovered_via': row['discovered_via'],
+                'category': row['category'],
             })
             selected.append(row)
             break
     return cards, selected
 
 
+def collect_publisher(source):
+    if source['type'] == 'web':
+        rows, raw = web_source(source)
+        return rows, raw, 'web', {}
+    try:
+        rows, raw = direct_feed(source)
+        return rows, raw, source['type'], {}
+    except (OSError, ValueError, ET.ParseError) as exc:
+        if not source.get('web_fallback'):
+            raise
+        rows, raw = web_source(source, source['web_fallback'])
+        return rows, raw, 'web', {'feed_error': str(exc)[:180], 'effective_url': source['web_fallback']}
+
+
+def topic_candidate(row):
+    return not blocked(row) and (relevant_ai_news(row)
+                                  or relevant_ai_person_event(row['title'] + ' ' + row['description']))
+
+
 def collect():
+    watch = SOURCE_CONFIG['person_watchlist']
     queries = [
-        ('AI 模型 发布 机器人 芯片', False, False),
-        ('AI robotics models research chip launch', False, True),
-        ('AI 创始人 科学家 发布 机器人', True, False),
-        ('AI CEO scientist announces robot models', True, True),
-        ('黄仁勋 奥尔特曼 李飞飞 梁文锋 杨植麟 人工智能', True, False),
+        ('人工智能 OR 大模型 OR 机器人', False, False),
+        ('AI robotics OR AI products OR AI research', False, True),
+        ('AI (CEO OR researcher OR founder) interview', True, True),
+        ('人工智能 (创始人 OR 科学家 OR 工程师)', True, False),
     ]
-    for source in SOURCE_REGISTRY:
-        if source['type'] == 'web' and source.get('official'):
-            domain = source.get('domain', host(source['url']))
-            queries.append((f'site:{domain} AI', True, source['region'] != 'CN'))
+    for key, international in [('zh', False), ('en', True)]:
+        terms = [person[key] for person in watch]
+        for start in range(0, len(terms), 4):
+            group = ' OR '.join(f'"{term}"' for term in terms[start:start + 4])
+            queries.append((f'({group}) AI', True, international))
     stats, rows = {}, []
-    with ThreadPoolExecutor(max_workers=12) as pool:
-        aihot = pool.submit(aihot_candidates)
-        feeds = [(source['name'], pool.submit(direct_feed, source)) for source in FEEDS]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        jobs = {source['name']: pool.submit(collect_publisher, source) for source in PUBLISHERS}
+        jobs['AIHOT'] = pool.submit(aihot_candidates)
+        jobs['Hacker News'] = pool.submit(hacker_news)
+        jobs['GitHub Trending'] = pool.submit(github_trending)
         searches = [(q[0], pool.submit(search, *q)) for q in queries]
-        for name, future in feeds + searches:
+        for source in SOURCE_REGISTRY:
+            name = source['name']
+            method = source['type']
+            gathered, raw, details = [], 0, {}
             try:
-                value = future.result()
-                gathered, raw = value if isinstance(value, tuple) else (value, None)
-                stats[name] = {'raw_feed_entries': raw, 'valid_18h': sum(in_window(r, NEWS_HOURS) for r in gathered),
-                               'valid_person_window': len(gathered)}
-                rows.extend(gathered)
+                if name == 'Google News':
+                    for query, future in searches:
+                        try:
+                            found, count = future.result()
+                            gathered.extend(found)
+                            raw += count
+                        except (OSError, ValueError, ET.ParseError) as exc:
+                            details.setdefault('query_failures', {})[query] = str(exc)[:160]
+                    if len(details.get('query_failures', {})) == len(searches):
+                        raise ValueError('all Google News queries failed')
+                elif name == 'AIHOT':
+                    gathered, details = jobs[name].result()
+                    feeds = [details['selected_feed'], details['all_feed']]
+                    raw = sum(feed.get('raw', 0) for feed in feeds)
+                    if not any(feed.get('pages') for feed in feeds):
+                        raise ValueError('AIHOT returned no readable page')
+                elif name in DISCOVERY:
+                    gathered, raw = jobs[name].result()
+                else:
+                    gathered, raw, method, details = jobs[name].result()
+                status = {'access': 'ok', 'last_success_at': dt.datetime.now(dt.timezone.utc).isoformat()}
             except (OSError, ValueError, ET.ParseError) as exc:
-                stats[name] = {'error': str(exc)[:200]}
-        aihot_rows, aihot_stats = aihot.result()
-    rows.extend(aihot_rows)
-    stats['AIHOT'] = aihot_stats
+                status = {'access': 'failed', 'last_success_at': None, 'error': str(exc)[:200]}
+            gathered = list({row['canonical_url']: row for row in gathered}.values())
+            eligible = [row for row in gathered if topic_candidate(row)]
+            stats[name] = {
+                'url': source['url'], 'category': source['category'], 'method': method,
+                **details, **status, 'raw': raw,
+                'valid_18h': sum(in_window(row, NEWS_HOURS) for row in gathered),
+                'valid_48h': len(gathered),
+                'topic_qualified_18h': sum(in_window(row, NEWS_HOURS) for row in eligible),
+                'topic_qualified_48h': len(eligible), 'topic_filtered': len(gathered) - len(eligible),
+                'selected_news': 0, 'selected_people': 0,
+            }
+            rows.extend(dict(row, ingest_source=name) for row in eligible)
     ranked = sorted(rows, key=editorial_rank, reverse=True)
     by_url = {}
     for row in ranked:
-        by_url.setdefault(row['canonical_url'], row)
-    return sorted(by_url.values(), key=editorial_rank, reverse=True), stats
+        current = by_url.setdefault(row['canonical_url'], row)
+        current.setdefault('discovered_by', [])
+        if row['ingest_source'] not in current['discovered_by']:
+            current['discovered_by'].append(row['ingest_source'])
+    return list(by_url.values()), stats
 
 
 def write_json(path, data):
@@ -954,12 +1118,28 @@ def main():
     news_cards, news_rows = choose_news(eligible_history, [], people_rows)
     problems = final_problems(news_cards, people_cards)
     selected = news_rows + people_rows
-    stats['AIHOT']['selected_news'] = sum(row['discovered_via'] == 'AIHOT' for row in news_rows)
-    stats['AIHOT']['selected_people'] = sum(row['discovered_via'] == 'AIHOT' for row in people_rows)
+    for field, chosen in [('selected_news', news_rows), ('selected_people', people_rows)]:
+        for row in chosen:
+            name = row.get('ingest_source', row['discovered_via'])
+            if name in stats:
+                stats[name][field] = stats[name].get(field, 0) + 1
+    last_report = out / 'source_report.json'
+    if last_report.exists():
+        try:
+            previous = json.loads(last_report.read_text('utf-8'))['sources']
+        except (OSError, ValueError, KeyError):
+            previous = {}
+        for name, source_stats in stats.items():
+            if not source_stats.get('last_success_at') and name in previous:
+                source_stats['last_success_at'] = previous[name].get('last_success_at')
     report = {
         'date': today, 'as_of_utc': NOW.isoformat(), 'issue_preview': issue,
         'sources': stats, 'unique_candidates': len(rows), 'history_rejected': len(rows) - len(eligible_history),
         'news_selected': news_cards, 'people_selected': people_cards,
+        'person_candidates': [
+            row for row in eligible_history if in_window(row, PERSON_HOURS)
+            and identify_person(row['title'] + ' ' + row['description'])[0]
+        ][:40],
         'candidates': eligible_history[:40], 'problems': problems,
     }
     print(json.dumps({key: report[key] for key in ('date', 'unique_candidates', 'history_rejected', 'problems')},
@@ -976,6 +1156,7 @@ def main():
         except Exception as exc:
             problems.append(f'固定模板出图失败：{exc}')
     report['status'] = 'needs_editorial_review' if problems else 'ready'
+    write_json(last_report, report)
     if test_mode or problems:
         write_json(out / 'editorial_review.json', report)
     if problems:

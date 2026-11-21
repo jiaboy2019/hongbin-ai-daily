@@ -25,7 +25,7 @@ class EditorialTests(unittest.TestCase):
         self.assertEqual(row['article_url'], self.raw()['links']['original'])
         self.assertEqual(row['canonical_url'], 'https://openai.com/index/release')
         self.assertEqual(row['source'], 'OpenAI')
-        self.assertEqual(row['heat'], 90)
+        self.assertNotIn('heat', row)
         self.assertIsNone(daily.parse_aihot_item(self.raw(url='https://openai.com.example.org/release')))
         self.assertIsNone(daily.parse_aihot_item(self.raw(url='https://aihot.news/items/test')))
 
@@ -49,6 +49,18 @@ class EditorialTests(unittest.TestCase):
         self.assertTrue(daily.duplicate_event(row, {'title': 'OpenAI launches GPT-5 model'}))
         self.assertFalse(daily.duplicate_event(row, {'title': 'OpenAI发布新一代语言模型GPT-4'}))
         self.assertTrue(daily.duplicate_event(row, {'article_url': row['article_url'], 'title': '另一种标题'}))
+
+    def test_channel_and_hot_score_do_not_affect_rank(self):
+        first = daily.parse_aihot_item(self.raw())
+        self.assertEqual(daily.editorial_rank(first), daily.editorial_rank(
+            dict(first, discovered_via='direct', heat=0, category='tech', source='任何媒体')))
+
+    def test_exact_person_window_and_finance_noise(self):
+        at_limit = daily.parse_aihot_item(self.raw('2026-11-19T12:00:00Z'))
+        outside = daily.parse_aihot_item(self.raw('2026-11-19T11:59:59Z'))
+        self.assertTrue(daily.in_window(at_limit, daily.PERSON_HOURS))
+        self.assertFalse(daily.in_window(outside, daily.PERSON_HOURS))
+        self.assertTrue(daily.blocked({'title': 'Anthropic’s I.P.O. turns researchers into millionaires'}))
 
     def test_pollution_and_person_name(self):
         self.assertTrue(daily.blocked({'description': 'm6米乐app在线登陆官网'}))

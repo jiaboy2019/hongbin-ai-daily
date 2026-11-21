@@ -63,6 +63,14 @@ jobs:
           path: ${{ env.FORMAL == 'true' && 'output/editorial_review.json' || 'test-output/editorial_review.json' }}
           if-no-files-found: warn
           retention-days: 7
+      - name: Upload source diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hongbin-source-diagnostics
+          path: ${{ env.FORMAL == 'true' && 'output/source_report.json' || 'test-output/source_report.json' }}
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload PNG
         uses: actions/upload-artifact@v4
         with:

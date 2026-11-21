@@ -1,452 +1,678 @@
 {
-  "policy": "Prefer attributable first-party AI reporting and verified editorial sources. Web entries are also searched by domain.",
+  "policy": "多来源并行，按报道内容及可追溯证据评价，国内外同一标准。聚合渠道仅用于发现。",
   "sources": [
     {
       "name": "TechCrunch",
       "region": "US",
       "type": "rss",
       "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "The Verge",
       "region": "US",
       "type": "rss",
       "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "MIT Technology Review",
       "region": "US",
       "type": "rss",
       "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "Ars Technica",
       "region": "US",
       "type": "rss",
       "url": "https://arstechnica.com/ai/feed/",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "WIRED",
       "region": "US",
       "type": "rss",
       "url": "https://www.wired.com/feed/tag/ai/latest/rss",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "VentureBeat",
       "region": "US",
       "type": "web",
       "url": "https://venturebeat.com/category/ai/feed/",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "IEEE Spectrum",
       "region": "US",
       "type": "rss",
       "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "Associated Press",
       "region": "US",
       "type": "web",
       "url": "https://apnews.com/hub/artificial-intelligence",
-      "priority": 1
+      "category": "general"
     },
     {
       "name": "Bloomberg",
       "region": "US",
       "type": "web",
       "url": "https://www.bloomberg.com/technology",
-      "priority": 1
+      "category": "general"
     },
     {
       "name": "The New York Times",
       "region": "US",
       "type": "rss",
       "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
-      "priority": 1,
-      "domain": "nytimes.com"
+      "domain": "nytimes.com",
+      "category": "general"
     },
     {
       "name": "CNBC",
       "region": "US",
       "type": "rss",
       "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
-      "priority": 1
+      "category": "general"
     },
     {
       "name": "ZDNET",
       "region": "US",
       "type": "rss",
       "url": "https://www.zdnet.com/news/rss.xml",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "The Wall Street Journal",
       "region": "US",
       "type": "web",
       "url": "https://www.wsj.com/tech/ai",
-      "priority": 1
+      "category": "general"
     },
     {
       "name": "The Information",
       "region": "US",
       "type": "web",
       "url": "https://www.theinformation.com/",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "CNET",
       "region": "US",
       "type": "rss",
       "url": "https://www.cnet.com/rss/news/",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "Engadget",
       "region": "US",
       "type": "rss",
       "url": "https://www.engadget.com/rss.xml",
-      "priority": 1
+      "category": "tech"
     },
     {
       "name": "BBC News",
       "region": "UK",
       "type": "rss",
       "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
-      "priority": 3,
-      "domain": "bbc.co.uk"
+      "domain": "bbc.co.uk",
+      "category": "general",
+      "domain_aliases": [
+        "bbc.com"
+      ]
     },
     {
       "name": "The Guardian",
       "region": "UK",
       "type": "rss",
       "url": "https://www.theguardian.com/uk/technology/rss",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "Financial Times",
       "region": "UK",
       "type": "rss",
       "url": "https://www.ft.com/rss/home/international",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "The Economist",
       "region": "UK",
       "type": "web",
       "url": "https://www.economist.com/science-and-technology",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "The Register",
       "region": "UK",
       "type": "atom",
       "url": "https://www.theregister.com/software/ai_ml/headlines.atom",
-      "priority": 3
+      "category": "tech"
     },
     {
       "name": "Reuters",
       "region": "International",
       "type": "web",
       "url": "https://www.reuters.com/technology/",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "Euronews",
       "region": "Europe",
       "type": "rss",
       "url": "https://www.euronews.com/rss",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "Deutsche Welle",
       "region": "Germany",
       "type": "rss",
       "url": "https://rss.dw.com/rdf/rss-en-top",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "France 24",
       "region": "France",
       "type": "rss",
       "url": "https://www.france24.com/en/rss",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "Der Spiegel International",
       "region": "Germany",
       "type": "rss",
       "url": "https://www.spiegel.de/international/index.rss",
-      "priority": 3
+      "category": "general"
     },
     {
       "name": "Nature",
       "region": "UK",
       "type": "rss",
       "url": "https://www.nature.com/nature.rss",
-      "priority": 3
+      "category": "tech"
     },
     {
       "name": "OpenAI",
       "region": "Official",
       "type": "rss",
       "url": "https://openai.com/news/rss.xml",
-      "priority": 2,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Google DeepMind",
       "region": "Official",
       "type": "rss",
       "url": "https://deepmind.google/blog/rss.xml",
-      "priority": 2,
-      "official": true
+      "category": "official",
+      "web_fallback": "https://deepmind.google/blog/"
     },
     {
       "name": "Google Research",
       "region": "Official",
       "type": "rss",
       "url": "https://research.google/blog/rss/",
-      "priority": 2,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Hugging Face",
       "region": "Official",
       "type": "rss",
       "url": "https://huggingface.co/blog/feed.xml",
-      "priority": 2,
-      "official": true
+      "category": "official"
     },
     {
       "name": "NVIDIA",
       "region": "Official",
       "type": "rss",
       "url": "https://blogs.nvidia.com/feed/",
-      "priority": 2,
-      "official": true
+      "category": "official"
     },
     {
       "name": "MIT News",
       "region": "Official",
       "type": "rss",
       "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
-      "priority": 2
+      "category": "official"
     },
     {
       "name": "Anthropic",
       "region": "US",
       "type": "web",
       "url": "https://www.anthropic.com/news",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Meta AI",
       "region": "US",
       "type": "web",
       "url": "https://ai.meta.com/blog/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Google",
       "region": "US",
       "type": "web",
       "url": "https://blog.google/innovation-and-ai/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "DeepSeek",
       "region": "CN",
       "type": "web",
       "url": "https://api-docs.deepseek.com/news/news250528",
-      "priority": 1,
-      "official": true
+      "category": "official",
+      "homepage": "https://www.deepseek.com/"
     },
     {
       "name": "通义千问",
       "region": "CN",
       "type": "web",
       "url": "https://qwenlm.github.io/blog/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "字节 Seed",
       "region": "CN",
       "type": "web",
       "url": "https://seed.bytedance.com/en/blog",
-      "priority": 1,
-      "official": true
+      "category": "official",
+      "homepage": "https://www.doubao.com/"
     },
     {
       "name": "腾讯混元",
       "region": "CN",
       "type": "web",
       "url": "https://hunyuan.tencent.com/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "智谱",
       "region": "CN",
       "type": "web",
       "url": "https://bigmodel.cn/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "月之暗面",
       "region": "CN",
       "type": "web",
       "url": "https://www.kimi.com/blog/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "DeepSeek GitHub",
       "region": "CN",
       "type": "atom",
       "url": "https://github.com/deepseek-ai/DeepSeek-V3/releases.atom",
-      "priority": 1,
-      "official": true,
       "path_prefix": "/deepseek-ai/",
-      "use_atom_updated": true
+      "category": "official"
     },
     {
       "name": "通义千问 GitHub",
       "region": "CN",
       "type": "atom",
       "url": "https://github.com/QwenLM/Qwen3/releases.atom",
-      "priority": 1,
-      "official": true,
       "path_prefix": "/qwenlm/",
-      "use_atom_updated": true
+      "category": "official"
     },
     {
       "name": "机器之心",
       "region": "CN",
       "type": "web",
       "url": "https://www.jiqizhixin.com/",
-      "priority": 2
+      "category": "tech"
     },
     {
       "name": "IT之家",
       "region": "CN",
-      "type": "web",
-      "url": "https://www.ithome.com/",
-      "priority": 2
+      "type": "rss",
+      "url": "https://www.ithome.com/rss/",
+      "category": "tech",
+      "web_fallback": "https://www.ithome.com/"
     },
     {
       "name": "量子位",
       "region": "CN",
       "type": "web",
       "url": "https://www.qbitai.com/",
-      "priority": 2
+      "category": "tech"
     },
     {
       "name": "36氪",
       "region": "CN",
       "type": "web",
       "url": "https://36kr.com/",
-      "priority": 2
+      "category": "tech"
     },
     {
       "name": "智东西",
       "region": "CN",
       "type": "web",
       "url": "https://zhidx.com/",
-      "priority": 2
+      "category": "tech"
     },
     {
       "name": "新华网",
       "region": "CN",
       "type": "web",
       "url": "https://www.news.cn/",
-      "priority": 2
+      "category": "general"
     },
     {
       "name": "澎湃新闻",
       "region": "CN",
       "type": "web",
       "url": "https://www.thepaper.cn/",
-      "priority": 2
+      "category": "general"
     },
     {
       "name": "The Decoder",
       "region": "DE",
-      "type": "web",
-      "url": "https://the-decoder.com/",
-      "priority": 2
+      "type": "rss",
+      "url": "https://the-decoder.com/feed/",
+      "category": "tech",
+      "web_fallback": "https://the-decoder.com/",
+      "article_path": "^/[a-z0-9]+(?:-[a-z0-9]+){3,}/?$"
     },
     {
       "name": "METR",
       "region": "US",
       "type": "web",
       "url": "https://metr.org/blog/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Thinking Machines Lab",
       "region": "US",
       "type": "web",
       "url": "https://thinkingmachines.ai/news/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Figma",
       "region": "US",
       "type": "web",
       "url": "https://www.figma.com/blog/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "Simon Willison",
       "region": "US",
       "type": "web",
       "url": "https://simonwillison.net/",
-      "priority": 2
+      "category": "tech"
     },
     {
       "name": "Runway",
       "region": "US",
       "type": "web",
       "url": "https://runwayml.com/news/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
       "name": "微软",
       "region": "US",
       "type": "web",
       "url": "https://blogs.microsoft.com/",
-      "priority": 1,
-      "official": true
+      "category": "official"
     },
     {
-      "name": "IEEE Spectrum",
+      "name": "Microsoft Research",
+      "category": "official",
       "region": "US",
+      "url": "https://www.microsoft.com/en-us/research/blog/",
       "type": "web",
-      "url": "https://spectrum.ieee.org/",
-      "priority": 2
+      "path_prefix": "/en-us/research/blog/"
     },
     {
-      "name": "BBC News",
-      "region": "GB",
+      "name": "xAI",
+      "category": "official",
+      "region": "US",
+      "url": "https://x.ai/news",
+      "type": "web"
+    },
+    {
+      "name": "腾讯官方资讯",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.tencent.com/zh-cn/articles/index.html",
       "type": "web",
-      "url": "https://www.bbc.com/news",
-      "priority": 2
+      "path_prefix": "/zh-cn/articles/"
+    },
+    {
+      "name": "火山引擎",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.volcengine.com/notice/0",
+      "type": "web"
+    },
+    {
+      "name": "百度智能云",
+      "category": "official",
+      "region": "CN",
+      "url": "https://cloud.baidu.com/news",
+      "type": "web"
+    },
+    {
+      "name": "Z.ai",
+      "category": "official",
+      "region": "CN",
+      "url": "https://z.ai/company",
+      "type": "web"
+    },
+    {
+      "name": "Z.ai 开发文档",
+      "category": "official",
+      "region": "CN",
+      "url": "https://docs.z.ai/",
+      "type": "web"
+    },
+    {
+      "name": "华为昇腾",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.hiascend.com/zh",
+      "type": "web"
+    },
+    {
+      "name": "华为云",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.huaweicloud.com/news.html",
+      "type": "web"
+    },
+    {
+      "name": "宇树科技",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.unitree.com/cn/news/",
+      "type": "web"
+    },
+    {
+      "name": "智元机器人",
+      "category": "official",
+      "region": "CN",
+      "url": "https://www.agibot.com/",
+      "type": "web"
+    },
+    {
+      "name": "钛媒体",
+      "category": "tech",
+      "region": "CN",
+      "url": "https://www.tmtpost.com/",
+      "type": "web"
+    },
+    {
+      "name": "新智元",
+      "category": "tech",
+      "region": "CN",
+      "url": "https://www.aiera.com.cn/",
+      "type": "web"
+    },
+    {
+      "name": "雷峰网",
+      "category": "tech",
+      "region": "CN",
+      "url": "https://www.leiphone.com/",
+      "type": "web"
+    },
+    {
+      "name": "中国新闻网",
+      "category": "general",
+      "region": "CN",
+      "url": "https://www.chinanews.com.cn/",
+      "type": "web"
+    },
+    {
+      "name": "央视新闻",
+      "category": "general",
+      "region": "CN",
+      "url": "https://news.cctv.com/",
+      "type": "web"
+    },
+    {
+      "name": "第一财经",
+      "category": "general",
+      "region": "CN",
+      "url": "https://www.yicai.com/",
+      "type": "web"
+    },
+    {
+      "name": "财新",
+      "category": "general",
+      "region": "CN",
+      "url": "https://www.caixin.com/",
+      "type": "web"
+    },
+    {
+      "name": "AIHOT",
+      "category": "discovery",
+      "region": "global",
+      "url": "https://aihot.news/api/v1/items",
+      "type": "api"
+    },
+    {
+      "name": "Google News",
+      "category": "discovery",
+      "region": "global",
+      "url": "https://news.google.com/",
+      "type": "search"
+    },
+    {
+      "name": "Hacker News",
+      "category": "discovery",
+      "region": "global",
+      "url": "https://hacker-news.firebaseio.com/v0/topstories.json",
+      "type": "api"
+    },
+    {
+      "name": "GitHub Trending",
+      "category": "discovery",
+      "region": "global",
+      "url": "https://github.com/trending",
+      "type": "web"
+    }
+  ],
+  "person_watchlist": [
+    {
+      "name": "Sam Altman",
+      "role": "OpenAI CEO",
+      "en": "sam altman",
+      "zh": "奥尔特曼"
+    },
+    {
+      "name": "Dario Amodei",
+      "role": "Anthropic CEO",
+      "en": "dario amodei",
+      "zh": "阿莫迪"
+    },
+    {
+      "name": "Demis Hassabis",
+      "role": "Google DeepMind CEO",
+      "en": "demis hassabis",
+      "zh": "哈萨比斯"
+    },
+    {
+      "name": "Sundar Pichai",
+      "role": "Alphabet CEO",
+      "en": "sundar pichai",
+      "zh": "皮查伊"
+    },
+    {
+      "name": "Jensen Huang",
+      "role": "英伟达联合创始人",
+      "en": "jensen huang",
+      "zh": "黄仁勋"
+    },
+    {
+      "name": "Satya Nadella",
+      "role": "微软CEO",
+      "en": "satya nadella",
+      "zh": "纳德拉"
+    },
+    {
+      "name": "Mark Zuckerberg",
+      "role": "Meta CEO",
+      "en": "mark zuckerberg",
+      "zh": "扎克伯格"
+    },
+    {
+      "name": "Elon Musk",
+      "role": "xAI创始人",
+      "en": "elon musk",
+      "zh": "马斯克"
+    },
+    {
+      "name": "Fei-Fei Li",
+      "role": "AI科学家",
+      "en": "fei-fei li",
+      "zh": "李飞飞"
+    },
+    {
+      "name": "Andrew Ng",
+      "role": "AI教育与研究者",
+      "en": "andrew ng",
+      "zh": "吴恩达"
+    },
+    {
+      "name": "梁文锋",
+      "role": "DeepSeek创始人",
+      "en": "liang wenfeng",
+      "zh": "梁文锋"
+    },
+    {
+      "name": "王兴兴",
+      "role": "宇树科技创始人",
+      "en": "wang xingxing",
+      "zh": "王兴兴"
+    },
+    {
+      "name": "李彦宏",
+      "role": "百度创始人",
+      "en": "robin li",
+      "zh": "李彦宏"
+    },
+    {
+      "name": "吴泳铭",
+      "role": "阿里巴巴CEO",
+      "en": "eddie wu",
+      "zh": "吴泳铭"
+    },
+    {
+      "name": "张鹏",
+      "role": "智谱AI负责人",
+      "en": "zhang peng zhipu",
+      "zh": "张鹏 智谱"
+    },
+    {
+      "name": "杨植麟",
+      "role": "月之暗面创始人",
+      "en": "yang zhilin",
+      "zh": "杨植麟"
     }
   ]
 }
