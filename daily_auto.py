@@ -33,6 +33,10 @@ def editorial_eligible(row):
     title = row.get('title','').lower()
     source = row.get('source','').lower()
     if any(w in title for w in HIGH_RISK_CLAIMS): return False
+    # Explicitly reject unsupported sensational claims, even when the RSS publisher appears established.
+    if any(w in title for w in ('huang scandal', 'ouster of ceo jensen huang', 'jensen huang scandal',
+                               'chatgpt wallet', 'riemann hypothesis solved',
+                               '黎曼猜想已被证明', '黎曼猜想被攻克')): return False
     if any(w in title for w in ('[第一时间]','今日经济 -','昨夜今晨','每日速览','一周回顾')): return False
     if any(w in source for w in SUSPICIOUS_AGGREGATORS) and not any(w in source for w in ('新华','路透')): return False
     return True
@@ -368,6 +372,13 @@ if len(new_selection)<4:
     report = {
         'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
         'reason': f'具备独立摘要的中文新闻仅{len(new_selection)}/4条',
+        'diagnostics': {
+            'translation_service_rate_limited': translation_unavailable,
+            'all_news_candidates': len(news + domestic + direct_news + international_news),
+            'independent_summary_candidates': sum(valid_description(r) for r in news + domestic + direct_news + international_news),
+            'chinese_with_independent_summary': len(ready_pool),
+            'distinct_news_selected': len(new_selection),
+        },
         'news_candidates': [
             {'title': r['title'], 'source': r['source'],
              'description': tidy(r.get('description',''))[:240],
