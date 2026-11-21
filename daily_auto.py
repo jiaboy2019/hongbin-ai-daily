@@ -416,6 +416,20 @@ if len(leaders) != 3:
     report = {
         'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
         'reason': f'科技人物仅{len(leaders)}/3条；有效摘要新闻{len(ready_pool)}条',
+        'person_filter_diagnostics': {
+            'candidate_count': len(leader_rows),
+            'recognized_names': len([r for r in leader_rows if identify_person(r['title'])[0]]),
+            'recognized_with_independent_summary': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r)]),
+            'recognized_with_summary_and_eligible_source': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r) and editorial_eligible(r) and score(r)>=8]),
+            'recognized_with_chinese_title': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r) and editorial_eligible(r) and score(r)>=8 and is_chinese_text(r['title'])]),
+            'translation_rate_limited': translation_unavailable,
+        },
+        'recognized_person_details': [
+            {'title': r['title'], 'source': r['source'], 'name': identify_person(r['title'])[0],
+             'summary_ok': valid_description(r), 'eligible': editorial_eligible(r),
+             'score': score(r), 'chinese_title': is_chinese_text(r['title'])}
+            for r in leader_rows if identify_person(r['title'])[0]
+        ][:40],
         'selected_person_candidates_unverified': leaders,
         'person_search_candidates': [
             {'title': r['title'], 'source': r['source'],
