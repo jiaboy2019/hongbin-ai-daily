@@ -132,7 +132,7 @@ people = [
 leaders, selected, leader_names = [], [], []
 for name, role in people:
     if len(leaders) == 3: break
-    found = [r for r in gather(['"' + name + '"', '"' + name + '" (site:x.com OR site:github.com OR site:substack.com OR site:medium.com)', '"' + name + '" (AI OR 人工智能 OR 科技)'], leader=True) if name.lower() in r['title'].lower() and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传'))]
+    found = [r for r in gather(['"' + name + '" (AI OR 人工智能 OR 机器人 OR 科研)', '"' + name + '" (演讲 OR 发表 OR 发布 OR 研究)'], leader=True) if name.lower() in r['title'].lower() and r['source'].lower() not in ('x', 'twitter', '搜狐', 'sohu') and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传','最新消息：','政治通牒','被搞了','说白了','震惊','爆料'))]
     if found and not any(name in n or n in name for n in leader_names):
         r = sorted(found, key=lambda item: (score(item), len(item['title']) <= 65), reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
