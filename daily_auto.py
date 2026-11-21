@@ -25,10 +25,22 @@ TRUSTED_SOURCES = ('Reuters','Associated Press','AP News','Bloomberg','Financial
 MAJOR_ACTORS = ('openai','anthropic','deepmind','google','microsoft','nvidia','meta','apple','deepseek','xai','mistral','hugging face','英伟达','谷歌','微软','苹果','阿里','腾讯','华为','字节','百度','宇树','智元')
 SUBSTANTIVE = ('重大突破','首次','全球首','新一代','发布','推出','开源','突破','训练','上线','收购','部署','商用','launch','released','unveils','announces','breakthrough','open-source','deploy','introduces','rolls out')
 LOW_VALUE = ('昨夜今晨','早报汇总','科技早报','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手','心理困扰','关联机制','中介作用','调节效应','三年行动方案','五张清单','地方出台','研讨会','论坛','或将','传闻','rumor','rumour')
+# 对极易引发误传的重大事件，默认不使用单一转载标题作为已证实事实。
+# 只有在独立核验流程建立后，才考虑恢复这类高风险报道。
+HIGH_RISK_CLAIMS = ('上市','ipo','被迫出局','被解雇','辞职','去世','收购完成','宣布破产','宣布倒闭','遭逮捕','涉嫌犯罪','万亿估值落槌')
+SUSPICIOUS_AGGREGATORS = ('moomoo','investing.com','sina.com','搜狐','sohu','techgenyz')
+def editorial_eligible(row):
+    title = row.get('title','').lower()
+    source = row.get('source','').lower()
+    if any(w in title for w in HIGH_RISK_CLAIMS): return False
+    if any(w in title for w in ('[第一时间]','今日经济 -','昨夜今晨','每日速览','一周回顾')): return False
+    if any(w in source for w in SUSPICIOUS_AGGREGATORS) and not any(w in source for w in ('新华','路透')): return False
+    return True
+
 def score(row):
     title, source = row['title'], row.get('source','')
     low = title.lower()
-    if any(w.lower() in low for w in EXCLUDE + LOW_VALUE): return -100
+    if not editorial_eligible(row) or any(w.lower() in low for w in EXCLUDE + LOW_VALUE): return -100
     if len(title) > 100: return -30
     points = 0
     if any(w.lower() in low for w in ('ai','人工智能','大模型','机器人','芯片','智能体','agent','模型','robot','chip','llm')): points += 5
@@ -287,7 +299,7 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names or not is_chinese_text(r['title']): continue
+        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
@@ -321,7 +333,7 @@ def is_chinese_ready(row):
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
-ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0],key=score,reverse=True)
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],key=score,reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
