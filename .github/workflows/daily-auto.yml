@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Diagnose 48-hour leader rejection causes while keeping 18-hour general news.
+# Test publisher metadata enrichment for 48-hour leader reports.
