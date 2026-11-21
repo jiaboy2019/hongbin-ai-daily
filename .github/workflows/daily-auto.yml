@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test broad AI-practitioner discovery with strict AI-only news selection.
+# Diagnose the remaining distinct-person selection bottleneck without loosening factual standards.
