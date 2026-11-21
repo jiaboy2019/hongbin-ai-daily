@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test translation quality gate and mainstream international source filtering.
+# Test international-source Chinese search and remove dated newswire boilerplate.
