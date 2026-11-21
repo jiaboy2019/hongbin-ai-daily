@@ -364,7 +364,20 @@ def valid_summary(row):
     return len(desc) >= 25 and desc.lower() not in title.lower() and title.lower() not in desc.lower()
 
 if len(leaders) != 3:
-    raise RuntimeError(f'人物动态仅{len(leaders)}/3条，拒绝用占位新闻出图')
+    # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
+    report = {
+        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
+        'reason': f'科技人物仅{len(leaders)}/3条',
+        'verified_person_candidates': leaders,
+        'news_candidates': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description',''))[:240], 'score': score(r)}
+            for r in ready_pool[:30]
+        ],
+        'note': '仅供编辑审阅，候选未完成独立事实核验，不能直接发布。'
+    }
+    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
+    raise RuntimeError(f'人物动态仅{len(leaders)}/3条，已输出待审候选报告，拒绝用占位新闻出图')
 if any(not valid_summary(r) for r in news + selected):
     raise RuntimeError('部分新闻缺少独立的事实摘要，拒绝仅重复标题出图')
 if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
