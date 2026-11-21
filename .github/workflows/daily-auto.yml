@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test bounded Chinese translation fallback and publisher summary enrichment.
+# Test expanded independent media feeds, site search, and editorial quality gates.
