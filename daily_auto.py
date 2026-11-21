@@ -310,8 +310,9 @@ def identify_person(title):
             return name, role
     m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\s]*([\u4e00-\u9fff]{2,4})(?:[：，称说表示认为谈]|\s)', title)
     if m: return m.group(1), '科技人物'
-    m = re.search(r'^([\u4e00-\u9fff]{2,4})[：称说表示认为谈]', title)
-    if m: return m.group(1), '科技人物'
+    # 只凭标题开头的两个汉字无法可靠判断是人名，容易把“拷问”等动词当人物。
+    # 未列入明确人物名单的名字，需要具备职务及姓名的上下文。
+    return None, None
     return None, None
 def is_chinese_text(t):
     return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
