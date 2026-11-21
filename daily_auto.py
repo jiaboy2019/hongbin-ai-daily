@@ -239,10 +239,14 @@ def aihot_candidates(max_age_hours=18):
             except (ValueError, TypeError, AttributeError): continue
             links = item.get('links') or []
             link = ''
-            if isinstance(links, list):
+            if isinstance(links, dict):
+                candidate_url = links.get('original') or ''
+                if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in (urllib.parse.urlparse(candidate_url).hostname or ''):
+                    link = candidate_url
+            elif isinstance(links, list):
                 for candidate in links:
                     candidate_url = candidate if isinstance(candidate, str) else (candidate.get('url') or candidate.get('href') or '') if isinstance(candidate, dict) else ''
-                    if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in urllib.parse.urlparse(candidate_url).netloc:
+                    if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in (urllib.parse.urlparse(candidate_url).hostname or ''):
                         link = candidate_url; break
             if not link: continue  # 必须可追溯原始来源
             source = item.get('source') or ''
