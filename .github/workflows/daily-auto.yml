@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test clean full-sentence headlines and body without publisher boilerplate.
+# Test relevance and reject generic or irrelevant headlines.
