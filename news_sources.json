@@ -1,5 +1,5 @@
 {
-  "policy": "International and US editorial sources first; official AI research and product news; Chinese outlets only as fallback. Web entries require public metadata; no paywall bypass.",
+  "policy": "Prefer attributable first-party AI reporting and verified editorial sources. Web entries are also searched by domain.",
   "sources": [
     {
       "name": "TechCrunch",
@@ -39,7 +39,7 @@
     {
       "name": "VentureBeat",
       "region": "US",
-      "type": "rss",
+      "type": "web",
       "url": "https://venturebeat.com/category/ai/feed/",
       "priority": 1
     },
@@ -69,7 +69,8 @@
       "region": "US",
       "type": "rss",
       "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
-      "priority": 1
+      "priority": 1,
+      "domain": "nytimes.com"
     },
     {
       "name": "CNBC",
@@ -118,7 +119,8 @@
       "region": "UK",
       "type": "rss",
       "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
-      "priority": 3
+      "priority": 3,
+      "domain": "bbc.co.uk"
     },
     {
       "name": "The Guardian",
@@ -195,41 +197,255 @@
       "region": "Official",
       "type": "rss",
       "url": "https://openai.com/news/rss.xml",
-      "priority": 2
+      "priority": 2,
+      "official": true
     },
     {
       "name": "Google DeepMind",
       "region": "Official",
       "type": "rss",
       "url": "https://deepmind.google/blog/rss.xml",
-      "priority": 2
+      "priority": 2,
+      "official": true
     },
     {
       "name": "Google Research",
       "region": "Official",
       "type": "rss",
       "url": "https://research.google/blog/rss/",
-      "priority": 2
+      "priority": 2,
+      "official": true
     },
     {
       "name": "Hugging Face",
       "region": "Official",
       "type": "rss",
       "url": "https://huggingface.co/blog/feed.xml",
-      "priority": 2
+      "priority": 2,
+      "official": true
     },
     {
       "name": "NVIDIA",
       "region": "Official",
       "type": "rss",
       "url": "https://blogs.nvidia.com/feed/",
-      "priority": 2
+      "priority": 2,
+      "official": true
     },
     {
       "name": "MIT News",
       "region": "Official",
       "type": "rss",
       "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+      "priority": 2
+    },
+    {
+      "name": "Anthropic",
+      "region": "US",
+      "type": "web",
+      "url": "https://www.anthropic.com/news",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "Meta AI",
+      "region": "US",
+      "type": "web",
+      "url": "https://ai.meta.com/blog/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "Google",
+      "region": "US",
+      "type": "web",
+      "url": "https://blog.google/innovation-and-ai/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "DeepSeek",
+      "region": "CN",
+      "type": "web",
+      "url": "https://api-docs.deepseek.com/news/news250528",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "通义千问",
+      "region": "CN",
+      "type": "web",
+      "url": "https://qwenlm.github.io/blog/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "字节 Seed",
+      "region": "CN",
+      "type": "web",
+      "url": "https://seed.bytedance.com/en/blog",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "腾讯混元",
+      "region": "CN",
+      "type": "web",
+      "url": "https://hunyuan.tencent.com/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "智谱",
+      "region": "CN",
+      "type": "web",
+      "url": "https://bigmodel.cn/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "月之暗面",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.kimi.com/blog/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "DeepSeek GitHub",
+      "region": "CN",
+      "type": "atom",
+      "url": "https://github.com/deepseek-ai/DeepSeek-V3/releases.atom",
+      "priority": 1,
+      "official": true,
+      "path_prefix": "/deepseek-ai/",
+      "use_atom_updated": true
+    },
+    {
+      "name": "通义千问 GitHub",
+      "region": "CN",
+      "type": "atom",
+      "url": "https://github.com/QwenLM/Qwen3/releases.atom",
+      "priority": 1,
+      "official": true,
+      "path_prefix": "/qwenlm/",
+      "use_atom_updated": true
+    },
+    {
+      "name": "机器之心",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.jiqizhixin.com/",
+      "priority": 2
+    },
+    {
+      "name": "IT之家",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.ithome.com/",
+      "priority": 2
+    },
+    {
+      "name": "量子位",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.qbitai.com/",
+      "priority": 2
+    },
+    {
+      "name": "36氪",
+      "region": "CN",
+      "type": "web",
+      "url": "https://36kr.com/",
+      "priority": 2
+    },
+    {
+      "name": "智东西",
+      "region": "CN",
+      "type": "web",
+      "url": "https://zhidx.com/",
+      "priority": 2
+    },
+    {
+      "name": "新华网",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.news.cn/",
+      "priority": 2
+    },
+    {
+      "name": "澎湃新闻",
+      "region": "CN",
+      "type": "web",
+      "url": "https://www.thepaper.cn/",
+      "priority": 2
+    },
+    {
+      "name": "The Decoder",
+      "region": "DE",
+      "type": "web",
+      "url": "https://the-decoder.com/",
+      "priority": 2
+    },
+    {
+      "name": "METR",
+      "region": "US",
+      "type": "web",
+      "url": "https://metr.org/blog/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "Thinking Machines Lab",
+      "region": "US",
+      "type": "web",
+      "url": "https://thinkingmachines.ai/news/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "Figma",
+      "region": "US",
+      "type": "web",
+      "url": "https://www.figma.com/blog/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "Simon Willison",
+      "region": "US",
+      "type": "web",
+      "url": "https://simonwillison.net/",
+      "priority": 2
+    },
+    {
+      "name": "Runway",
+      "region": "US",
+      "type": "web",
+      "url": "https://runwayml.com/news/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "微软",
+      "region": "US",
+      "type": "web",
+      "url": "https://blogs.microsoft.com/",
+      "priority": 1,
+      "official": true
+    },
+    {
+      "name": "IEEE Spectrum",
+      "region": "US",
+      "type": "web",
+      "url": "https://spectrum.ieee.org/",
+      "priority": 2
+    },
+    {
+      "name": "BBC News",
+      "region": "GB",
+      "type": "web",
+      "url": "https://www.bbc.com/news",
       "priority": 2
     }
   ]

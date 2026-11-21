@@ -1,22 +1,23 @@
 import base64, datetime as dt, hashlib, html, json, re, urllib.parse, urllib.request, io
 from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 from PIL import Image
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from zoneinfo import ZoneInfo
-from playwright.sync_api import sync_playwright
 
-# 自动生成程序：保持 index.html 与 globe.png 固定母版不变
+from argparse import ArgumentParser
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+import os
+from tempfile import TemporaryDirectory
+
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / 'output'
-OUT.mkdir(exist_ok=True)
-TODAY = dt.datetime.now(ZoneInfo('Asia/Shanghai')).date()
+BEIJING = dt.timezone(dt.timedelta(hours=8))
+NEWS_HOURS = 18
+PERSON_HOURS = 168
+NOW = dt.datetime.now(dt.timezone.utc)
 HISTORY = ROOT / 'published_history.json'
-state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
-old = {x['key'] for x in state['items'] if x.get('date') != TODAY.isoformat()}
-# 同一天重跑时不自动增加期号，避免测试造成跳号。
-last_dates = [x.get('date') for x in state['items']]
-SAME_DAY = TODAY.isoformat() in last_dates[-7:]
+
 
 # 仅调整新闻筛选；原网页模板、图标、画布与栏目布局均保持不变。
 EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词', '培训', '培训机构', '横向测评', '辞职', '利润翻倍', '亏超', '新媒体创作', '课程体系', '技能培训班', '抵押的AI芯片')
@@ -32,7 +33,7 @@ SUSPICIOUS_AGGREGATORS = ('moomoo','investing.com','sina.com','搜狐','sohu','t
 def editorial_eligible(row):
     title = row.get('title','').lower()
     source = row.get('source','').lower()
-    if any(w in title for w in HIGH_RISK_CLAIMS): return False
+    if any(w in title for w in HIGH_RISK_CLAIMS if w != 'ipo') or re.search(r'\bipo\b', title): return False
     # Explicitly reject unsupported sensational claims, even when the RSS publisher appears established.
     if any(w in title for w in ('huang scandal', 'ouster of ceo jensen huang', 'jensen huang scandal',
                                'chatgpt wallet', 'riemann hypothesis solved',
@@ -47,13 +48,13 @@ def score(row):
     if not editorial_eligible(row) or any(w.lower() in low for w in EXCLUDE + LOW_VALUE): return -100
     if len(title) > 100: return -30
     points = 0
-    if any(w.lower() in low for w in ('ai','人工智能','大模型','机器人','芯片','智能体','agent','模型','robot','chip','llm')): points += 5
+    if re.search(r'(?<![a-z])ai(?![a-z])', low) or any(w.lower() in low for w in ('人工智能','大模型','机器人','芯片','智能体','agent','模型','robot','chip','llm')): points += 5
     if any(w.lower() in source.lower() for w in TRUSTED_SOURCES): points += 9
     if any(w in low for w in MAJOR_ACTORS): points += 12
     if any(w in low for w in SUBSTANTIVE): points += 12
     if any(w in low for w in ('科研突破','重大突破','全球首','新一代','新模型','开源模型','机器人量产','world model','世界模型')): points += 7
     if any(w in low for w in ('金融','股价','股票','融资','财报','贷款','证券','期货')): points -= 10
-    if len(title)>65: points -= 8
+    if len(title)>85: points -= 8
     return points if points >= 8 else -20
 
 def similar(a, b):
@@ -77,7 +78,7 @@ def valid_description(row):
     normalized_desc = re.sub(r'[^\w\u4e00-\u9fff]', '', desc.lower())
     normalized_source = re.sub(r'[^\w\u4e00-\u9fff]', '', source.lower())
     if normalized_desc == normalized_source or (normalized_source and normalized_desc.startswith(normalized_source) and len(normalized_desc) < len(normalized_source) + 12): return False
-    if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
+    if desc.casefold() == title.casefold() or desc.casefold() in title.casefold(): return False
     if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
     if len(re.sub(r'[^A-Za-z\u4e00-\u9fff]', '', desc)) < 22: return False
     return True
@@ -87,181 +88,230 @@ def norm(s):
     return hashlib.sha256(re.sub(r'[^\w\u4e00-\u9fff]', '', s.lower()).encode()).hexdigest()[:20]
 
 def search(q, leader=False, international=False):
-    params = urllib.parse.urlencode({'q': q + (' when:2d' if leader else ' when:1d'), 'hl':'en-US' if international else 'zh-CN','gl':'US' if international else 'CN','ceid':'US:en' if international else 'CN:zh-Hans'})
-    req = urllib.request.Request('https://news.google.com/rss/search?' + params, headers={'User-Agent':'Mozilla/5.0'})
-    with urllib.request.urlopen(req, timeout=25) as f:
-        root = ET.fromstring(f.read())
+    params = urllib.parse.urlencode({
+        'q': q + (' when:7d' if leader else ' when:1d'),
+        'hl': 'en-US' if international else 'zh-CN', 'gl': 'US' if international else 'CN',
+        'ceid': 'US:en' if international else 'CN:zh-Hans',
+    })
+    root = ET.fromstring(fetch('https://news.google.com/rss/search?' + params))
     rows = []
-    for x in root.findall('.//item'):
-        t = tidy(x.findtext('title', ''))
-        title, sep, source = t.rpartition(' - ')
-        if not sep:
-            title, source = t, '新闻媒体'
-        k = norm(title)
-        try:
-            published = parsedate_to_datetime(x.findtext('pubDate', '')).astimezone(ZoneInfo('Asia/Shanghai'))
-            age = (dt.datetime.now(ZoneInfo('Asia/Shanghai')) - published).total_seconds()
-            if not (0 <= age <= (48 if leader else 18) * 3600): continue
-        except (ValueError, TypeError, AttributeError):
+    for item in root.findall('.//item'):
+        title = tidy(item.findtext('title'))
+        publisher = item.find('source')
+        if publisher is None:
             continue
-        raw_description = x.findtext('description', '') or ''
-        description = tidy(raw_description)
-        publisher_links = [html.unescape(u) for u in re.findall(r'href=["\\\'](https?://[^"\\\']+)', raw_description)]
-        publisher_links = [u for u in publisher_links if not (urllib.parse.urlparse(u).hostname or '').endswith(('google.com','google.cn'))]
-        # Google News 的描述常为标题/相关新闻列表；仅在有独立文本时使用。
-        if description.startswith(title): description = description[len(title):].strip(' -—:：')
-        if len(description) < 24 or description.lower().startswith('view full coverage'): description = ''
-        row = {'title': title, 'source': source[:30], 'key': k, 'description': description, 'article_url': publisher_links[0] if publisher_links else ''}
-        if k not in old and len(title) >= 10 and (leader or score(row) > 0) and not any(similar(title, p['title']) for p in state['items'][-100:]):
+        suffix = ' - ' + tidy(publisher.text)
+        title = title.removesuffix(suffix)
+        desc = item.findtext('description', '')
+        links = [html.unescape(u) for u in re.findall(r"""href=["'](https?://[^"']+)""", desc)]
+        publisher_host = host(publisher.get('url', ''))
+        link = next((u for u in links if publisher_host and domain_matches(host(u), publisher_host)), '')
+        row = candidate(title, link, item.findtext('pubDate'), '', 'Google News')
+        if row and in_window(row, PERSON_HOURS if leader else NEWS_HOURS):
             rows.append(row)
     return rows
 
+
+class ArticleMetadata(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.meta = {}
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'meta':
+            values = dict(attrs)
+            key = values.get('property') or values.get('name')
+            if key and values.get('content'):
+                self.meta[key.lower()] = values['content']
+
+
 def article_meta_summary(url):
-    # Extract a publisher's own metadata, never fabricate an article summary.
-    if not url or not url.startswith(('https://','http://')): return ''
-    host = urllib.parse.urlparse(url).hostname or ''
-    if host.endswith(('google.com','google.cn','googleusercontent.com')): return ''
+    source = publisher_for(url)
+    if not source:
+        return ''
     try:
         req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
         with urllib.request.urlopen(req, timeout=5) as resp:
+            redirect_source = publisher_for(resp.geturl())
+            if not redirect_source or redirect_source['name'] != source['name']:
+                return ''
             page = resp.read(350_000).decode('utf-8', 'ignore')
-        for tag in re.findall(r'<meta\\b[^>]*>', page, re.I):
-            if not re.search(r'(?:og:description|name=["\\x27]description)', tag, re.I): continue
-            m = re.search(r'content=["\\x27](.*?)["\\x27]', tag, re.I | re.S)
-            if m:
-                result = tidy(m.group(1))[:450]
-                if len(result) >= 30: return result
-    except Exception as exc:
-        print('原文摘要获取失败:', host, str(exc)[:65])
+        parser = ArticleMetadata()
+        parser.feed(page)
+        return tidy(parser.meta.get('og:description') or parser.meta.get('description'))[:600]
+    except (OSError, ValueError) as exc:
+        print('原文摘要获取失败:', source['name'], str(exc)[:65])
     return ''
 
 
-def enrich_person_summaries(rows, identify_person):
-    # Do not manufacture facts from the headline; only use publisher-provided metadata.
-    attempts = 0
-    for row in sorted(rows, key=score, reverse=True):
-        if attempts >= 35: break
-        if not identify_person(row['title'])[0] or not editorial_eligible(row): continue
-        if valid_description(row): continue
-        url = row.get('article_url', '')
-        if not url: continue
-        attempts += 1
-        summary = article_meta_summary(url)
-        if summary:
-            candidate = dict(row, description=summary)
-            if valid_description(candidate): row['description'] = summary
-    print('人物原文摘要补采尝试:', attempts)
-
-
-def gather(queries, leader=False, international=False):
-    rows, used = [], set()
-    for q in queries:
-        try:
-            for r in search(q, leader=leader, international=international):
-                if r['key'] not in used:
-                    rows.append(r); used.add(r['key'])
-        except Exception as e:
-            print('RSS query failed:', q, e)
-    return sorted(rows, key=score, reverse=True) if not leader else rows
-
-
-# 独立 RSS 来源：与 Google News 搜索互补。失败时跳过，不影响日报生成。
-# 经 GitHub Actions 实测的英文媒体和官方 RSS；其余配置保留待复测。
-# 新闻来源以 news_sources.json 为准，不再维护重复的硬编码媒体名单。
-AUDITED_FEED_NAMES = {
-    'TechCrunch', 'The Verge', 'MIT Technology Review', 'Ars Technica',
-    'WIRED', 'IEEE Spectrum', 'The New York Times', 'CNBC', 'ZDNET',
-    'CNET', 'Engadget', 'BBC News', 'The Guardian', 'Financial Times',
-    'The Register', 'Euronews', 'France 24', 'Der Spiegel International',
-    'Google DeepMind', 'Google Research', 'Hugging Face', 'NVIDIA',
-}
 SOURCE_REGISTRY = json.loads((ROOT / 'news_sources.json').read_text('utf-8'))['sources']
-DIRECT_FEEDS = [
-    (s['name'], s['url']) for s in SOURCE_REGISTRY
-    if s['name'] in AUDITED_FEED_NAMES and s['type'] in ('rss', 'atom')
-]
-# 国内媒体只在国际来源不足时作为原有搜索渠道补位。
+FEEDS = [source for source in SOURCE_REGISTRY if source['type'] in ('rss', 'atom')]
 
-def direct_feed_rows(max_age_hours=18):
-    result = []
-    ns = {'atom':'http://www.w3.org/2005/Atom'}
-    for source, url in DIRECT_FEEDS:
-        try:
-            req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 HongbinDaily/1.0'})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                root = ET.fromstring(resp.read(1_500_000))
-            entries = root.findall('.//item') or root.findall('.//atom:entry', ns)
-            count = 0
-            for item in entries:
-                title = tidy(item.findtext('title') or item.findtext('atom:title', default='', namespaces=ns))
-                date_str = item.findtext('pubDate') or item.findtext('atom:published', default='', namespaces=ns) or item.findtext('atom:updated', default='', namespaces=ns)
-                try:
-                    when = parsedate_to_datetime(date_str) if not date_str.endswith('Z') else dt.datetime.fromisoformat(date_str.replace('Z','+00:00'))
-                    if when.tzinfo is None: when = when.replace(tzinfo=dt.timezone.utc)
-                    age = (dt.datetime.now(dt.timezone.utc)-when.astimezone(dt.timezone.utc)).total_seconds()
-                    if not 0 <= age <= max_age_hours*3600: continue
-                except Exception: continue
-                description = tidy(item.findtext('description') or item.findtext('{http://purl.org/rss/1.0/modules/content/}encoded') or item.findtext('atom:summary', default='', namespaces=ns) or item.findtext('atom:content', default='', namespaces=ns))
-                # 直接媒体源提供的独立摘要优先；仅删除标题重复前缀，不丢弃整段正文。
-                if description.startswith(title): description = description[len(title):].strip(' -—:：')
-                if len(description) < 25: description = ''
-                description = description[:450]
-                link = item.findtext('link') or item.findtext('atom:link', default='', namespaces=ns)
-                if not link:
-                    atom_link = item.find('atom:link', ns)
-                    if atom_link is not None: link = atom_link.attrib.get('href','')
-                row = {'title':title,'source':source,'key':norm(title),'description':description,'article_url':link,'age_hours':age/3600}
-                if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p['title']) for p in state['items'][-100:]):
-                    result.append(row); count+=1
-            print('独立源:',source,count)
-        except Exception as e:
-            print('独立源不可用，已跳过:',source,str(e)[:100])
-    return result
+def fetch(url, accept=None, timeout=8):
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; HongbinDaily/1.0)'}
+    if accept:
+        headers['Accept'] = accept
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as response:
+        return response.read(1_500_000)
 
-# AIHOT 是辅助发现渠道，不直接作为新闻事实来源；失败时回退原有采集。
-def aihot_candidates(max_age_hours=18):
-    url = 'https://aihot.news/api/v1/items'
+
+def host(url):
     try:
-        req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)', 'Accept':'application/json'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            payload = json.load(response)
-        items = payload.get('items', []) if isinstance(payload, dict) else []
-        rows = []
+        return (urllib.parse.urlsplit(url).hostname or '').lower().removeprefix('www.')
+    except (TypeError, ValueError):
+        return ''
+
+
+def domain_matches(actual, expected):
+    return actual == expected or actual.endswith('.' + expected)
+
+
+def canonical_url(url):
+    if not isinstance(url, str):
+        return ''
+    hostname = host(url)
+    if not hostname or not url.startswith('https://') or '@' in urllib.parse.urlsplit(url).netloc:
+        return ''
+    parts = urllib.parse.urlsplit(url)
+    query = sorted((k, v) for k, v in urllib.parse.parse_qsl(parts.query)
+                   if not k.lower().startswith('utm_') and k.lower() not in {'fbclid', 'gclid', 'ref'})
+    return urllib.parse.urlunsplit(('https', hostname, parts.path.rstrip('/') or '/',
+                                     urllib.parse.urlencode(query), ''))
+
+
+def publisher_for(url):
+    hostname = host(url)
+    path = urllib.parse.urlsplit(url).path.lower()
+    for source in SOURCE_REGISTRY:
+        domain = source.get('domain', host(source['url']))
+        prefix = source.get('path_prefix')
+        if domain and domain_matches(hostname, domain) and (not prefix or path.startswith(prefix)):
+            return source
+    return None
+
+
+def parse_date(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        result = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError:
+        try:
+            result = parsedate_to_datetime(value)
+        except (ValueError, TypeError, OverflowError):
+            return None
+    return result.astimezone(dt.timezone.utc) if result.tzinfo else None
+
+
+def candidate(title, url, published, description, via, heat=0):
+    title = tidy(title)
+    normalized_url = canonical_url(url)
+    when = parse_date(published)
+    source = publisher_for(url) if normalized_url else None
+    if not (title and source and when):
+        return None
+    return {
+        'title': title, 'source': source['name'], 'key': norm(title),
+        'article_url': url, 'canonical_url': normalized_url, 'published_at': when.isoformat(),
+        'age_hours': (NOW - when).total_seconds() / 3600,
+        'description': tidy(description)[:600], 'discovered_via': via,
+        'region': 'CN' if source.get('region') == 'CN' else 'international',
+        'official': bool(source.get('official')), 'heat': heat,
+    }
+
+
+def in_window(row, hours):
+    return 0 <= row['age_hours'] <= hours
+
+
+def direct_feed(source):
+    ns = '{http://www.w3.org/2005/Atom}'
+    root = ET.fromstring(fetch(source['url']))
+    rows = []
+    entries = root.findall('.//item') or root.findall(f'.//{ns}entry')
+    for item in entries:
+        link = item.findtext('link')
+        if not link:
+            link = next((x.get('href', '') for x in item.findall(f'{ns}link')
+                         if x.get('rel', 'alternate') == 'alternate'), '')
+        date = item.findtext('pubDate') or item.findtext(f'{ns}published')
+        # Atom only requires updated. For ordinary articles, an edit is not publication.
+        if not date and source.get('use_atom_updated'):
+            date = item.findtext(f'{ns}updated')
+        description = (item.findtext('description') or item.findtext(f'{ns}summary')
+                       or item.findtext(f'{ns}content') or '')
+        row = candidate(item.findtext('title') or item.findtext(f'{ns}title'),
+                        urllib.parse.urljoin(source['url'], link) if link else '',
+                        date, description, 'direct')
+        if row and in_window(row, PERSON_HOURS):
+            rows.append(row)
+    return rows, len(entries)
+
+
+def parse_aihot_item(item):
+    if not isinstance(item, dict) or not isinstance(item.get('links'), dict):
+        return None
+    title = next((item[k] for k in ('title', 'originalTitle') if isinstance(item.get(k), str) and item[k]), '')
+    summary = item.get('summary')
+    heat = item.get('score')
+    row = candidate(title, item['links'].get('original'), item.get('publishedAt'),
+                    summary if isinstance(summary, str) else '', 'AIHOT',
+                    min(100, max(0, heat)) if type(heat) is int else 0)
+    if row and isinstance(item.get('originalTitle'), str):
+        row['original_title'] = tidy(item['originalTitle'])
+    return row
+
+
+def aihot_page_rows(mode, max_pages):
+    endpoint = 'https://aihot.news/api/v1/items'
+    rows, seen, cursors = [], set(), set()
+    counts = Counter()
+    errors = []
+    cursor = None
+    for _ in range(max_pages):
+        params = {'mode': mode}
+        if cursor:
+            params['cursor'] = cursor
+        url = endpoint + '?' + urllib.parse.urlencode(params)
+        try:
+            payload = json.loads(fetch(url, 'application/json', timeout=12))
+            items = payload['items']
+            if not isinstance(items, list):
+                raise ValueError('AIHOT items is not a list')
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(str(exc))
+            break
+        counts['pages'] += 1
         for item in items:
-            if not isinstance(item, dict): continue
-            title = tidy(item.get('title') or item.get('originalTitle') or '')
-            published = item.get('publishedAt') or ''
-            try:
-                when = dt.datetime.fromisoformat(published.replace('Z', '+00:00'))
-                if when.tzinfo is None: continue
-                age = (dt.datetime.now(dt.timezone.utc) - when.astimezone(dt.timezone.utc)).total_seconds()/3600
-                if not 0 <= age <= max_age_hours: continue
-            except (ValueError, TypeError, AttributeError): continue
-            links = item.get('links') or []
-            link = ''
-            if isinstance(links, dict):
-                candidate_url = links.get('original') or ''
-                if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in (urllib.parse.urlparse(candidate_url).hostname or ''):
-                    link = candidate_url
-            elif isinstance(links, list):
-                for candidate in links:
-                    candidate_url = candidate if isinstance(candidate, str) else (candidate.get('url') or candidate.get('href') or '') if isinstance(candidate, dict) else ''
-                    if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in (urllib.parse.urlparse(candidate_url).hostname or ''):
-                        link = candidate_url; break
-            if not link: continue  # 必须可追溯原始来源
-            source = item.get('source') or ''
-            if isinstance(source, dict): source = source.get('name') or source.get('title') or ''
-            if not isinstance(source, str) or not source.strip(): continue
-            row = {'title':title, 'source':source[:30], 'key':norm(title),
-                   'description':tidy(item.get('summary') if isinstance(item.get('summary'),str) else '')[:450],
-                   'article_url':link, 'age_hours':age, 'discovered_via':'AIHOT'}
-            if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p.get('title','')) for p in state['items'][-100:]):
-                rows.append(row)
-        print('AIHOT 18小时有效候选:',len(rows))
-        return rows
-    except Exception as exc:
-        print('AIHOT 不可用，回退原有新闻来源:',str(exc)[:150])
-        return []
+            counts['raw'] += 1
+            row = parse_aihot_item(item)
+            if not row:
+                counts['missing_metadata_or_unverified_publisher'] += 1
+            elif row['canonical_url'] not in seen:
+                seen.add(row['canonical_url'])
+                if in_window(row, NEWS_HOURS):
+                    counts['valid_18h'] += 1
+                if in_window(row, PERSON_HOURS):
+                    rows.append(row)
+        page = payload.get('page') if isinstance(payload.get('page'), dict) else {}
+        cursor = page.get('nextCursor')
+        if not page.get('hasMore') or not isinstance(cursor, str) or cursor in cursors:
+            break
+        cursors.add(cursor)
+    counts['valid_person_window'] = len(rows)
+    return rows, {**counts, 'errors': errors}
+
+
+def aihot_candidates():
+    selected, selected_stats = aihot_page_rows('selected', 4)
+    general, general_stats = aihot_page_rows('all', 6)
+    rows = {row['canonical_url']: row for row in reversed(selected + general)}
+    return list(rows.values()), {
+        'selected_feed': selected_stats, 'all_feed': general_stats,
+        'valid_18h': sum(in_window(row, NEWS_HOURS) for row in rows.values()),
+        'valid_person_window': len(rows),
+    }
+
 
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
 PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing', 'Sam Altman':'Sam_Altman','Jensen Huang':'Jensen_Huang','Demis Hassabis':'Demis_Hassabis','Dario Amodei':'Dario_Amodei','Sundar Pichai':'Sundar_Pichai','Satya Nadella':'Satya_Nadella','Mark Zuckerberg':'Mark_Zuckerberg','Fei-Fei Li':'Fei-Fei_Li','Geoffrey Hinton':'Geoffrey_Hinton','Yann LeCun':'Yann_LeCun','Andrew Ng':'Andrew_Ng'}
@@ -293,6 +343,7 @@ PERSON_PORTRAIT_ALIASES = {
     'Demis Hassabis': 'Demis_Hassabis', 'Andrej Karpathy': 'Andrej_Karpathy',
     'Jeff Dean': 'Jeff_Dean', 'François Chollet': 'François_Chollet',
     'Dario Amodei': 'Dario_Amodei', 'Sundar Pichai': 'Sundar_Pichai',
+    'Ian Buck': 'Ian_Buck', 'Yossi Matias': 'Yossi_Matias',
 }
 def fetch_portrait(name):
     page = PERSON_PAGES.get(name) or PERSON_PORTRAIT_ALIASES.get(name)
@@ -312,15 +363,13 @@ NEWS_IMAGE_PAGES = [
     ('阿里', 'Alibaba_Group'), ('腾讯', 'Tencent'),
     ('小米', 'Xiaomi'), ('DeepSeek', 'DeepSeek'),
     ('宇树', 'Unitree_Robotics'), ('Anthropic', 'Anthropic'),
-    ('机器人', 'Robot'), ('人工智能', 'Artificial_intelligence'),
-    ('大模型', 'Large_language_model'), ('智能体', 'Intelligent_agent'),
-    ('芯片', 'Integrated_circuit'), ('AI', 'Artificial_intelligence'),
+    ('无人出租车', 'Robotaxi'), ('自动驾驶', 'Robotaxi'), ('Robotaxi', 'Robotaxi'),
+    ('Waymo', 'Waymo'), ('Thinking Machines', 'Thinking_Machines_Lab'),
 ]
 def fetch_news_image(title, used_pages=None):
     used_pages = used_pages if used_pages is not None else set()
     candidates = [(word, page) for word, page in NEWS_IMAGE_PAGES if word.lower() in title.lower()]
-    # 先用明确品牌、产品或技术实体，避免泛用的“机器人”“AI”反复出现同一张图。
-    candidates.sort(key=lambda pair: (pair[1] in used_pages, pair[0] in ('AI','机器人','人工智能')))
+    candidates.sort(key=lambda pair: (pair[1] in used_pages, -len(pair[0])))
     for keyword, page in candidates:
         if page in used_pages: continue
         uri = fetch_wiki_thumbnail(page)
@@ -367,9 +416,9 @@ def to_chinese(text):
 def clean_attribution(text):
     """Remove repetitive publisher lead-ins; source is displayed separately."""
     text = tidy(text)
-    text = re.sub(r'^(?:[\\w\\u4e00-\\u9fff]{2,22}\\s*)?(?:\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)?\\s*消息[：:,，\\s]*', '', text)
-    text = re.sub(r'^(?:据|根据|来自)\\s*[^，。:：]{1,28}?(?:报道|消息|披露|介绍|称|显示)[，,:：\\s]*', '', text)
-    text = re.sub(r'^(?:报道称|消息称|媒体报道)[，,:：\\s]*', '', text)
+    text = re.sub(r'^(?:[\w\u4e00-\u9fff]{2,22}\s*)?(?:\d{1,2}\s*月\s*\d{1,2}\s*日)?\s*消息[：:,，\s]+', '', text)
+    text = re.sub(r'^(?:据|根据|来自)\s*[^，。:：]{1,28}?(?:报道|消息|披露|介绍|称|显示)[，,:：\s]+', '', text)
+    text = re.sub(r'^(?:报道称|消息称|媒体报道)[，,:：\s]+', '', text)
     return text.strip()
 
 def complete_excerpt(text, limit):
@@ -377,7 +426,10 @@ def complete_excerpt(text, limit):
     text = clean_attribution(text).replace('…', '').replace('...', '')
     text = text.strip(' ，,；;：:')
     if len(text) <= limit:
-        return text if text and not re.fullmatch(r'(?:\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)?\\s*消息[。.]?', text) else ''
+        return text if text and not re.fullmatch(r'(?:\d{1,2}\s*月\s*\d{1,2}\s*日)?\s*消息[。.]?', text) else ''
+    for sentence in re.split(r'(?<=[。！？!?])', text):
+        if 12 <= len(sentence.strip()) <= limit:
+            return sentence.strip()
     # Prefer a complete sentence or a short factual clause.
     for clause in re.split(r'[。！？!?；;，,]', text):
         clause = clause.strip()
@@ -388,8 +440,11 @@ def complete_excerpt(text, limit):
 def short_headline(raw, limit=22):
     """Produce a short, complete factual statement, never an unfinished title."""
     title = clean_attribution(to_chinese(raw)).rstrip('。！？!?')
-    title = re.split(r'\\s+[-–—|｜]\\s+', title)[0].strip()
-    if len(title) <= limit and not title.endswith(('将','并','和','与','及','为','在','对')):
+    title = re.split(r'\s+[-–—|｜]\s+', title)[0].strip()
+    def fits(text):
+        return sum(0.55 if char.isascii() else 1 for char in text) <= limit
+
+    if fits(title) and not title.endswith(('将','并','和','与','及','为','在','对')):
         return title
     clauses = re.split(r'[，,；;。！？!?：:]', title)
     # Prefer the clause containing the actual AI event, not an introductory slogan.
@@ -397,17 +452,19 @@ def short_headline(raw, limit=22):
     actions = ('发布','推出','上线','开源','研发','落地','应用','训练','升级','部署','成立','合作','突破','进入','宣布','推出','采用')
     topics = ('AI','人工智能','模型','机器人','智能体','芯片','OpenAI','Claude','Gemini','华为','微软','谷歌','英伟达')
     candidates = [c.strip(' “”“‘’') for c in clauses]
-    candidates = [c for c in candidates if 7 <= len(c) <= limit
+    candidates = [c for c in candidates[:1] if len(c) >= 7 and fits(c)
                   and not c.endswith(('将','并','和','与','及','为','在','对','称','表示','之后','之前'))
                   and not any(v in c for v in vague)]
     informative = [c for c in candidates if any(v in c for v in actions)
                    and any(t.lower() in c.lower() for t in topics)]
     if informative: return informative[0]
     if candidates: return candidates[0]
-    compressed = re.sub(r'（[^）]*）|\\([^)]*\\)', '', clauses[0])
+    compressed = re.sub(r'（[^）]*）|\([^)]*\)', '', clauses[0])
     compressed = re.sub(r'(?:重磅|刚刚|首次|正式|最新|全新|重大|惊人|突然|宣布|成功)', '', compressed)
+    compressed = re.sub(r'(开源权重模型|开放权重模型)', '开源模型', compressed)
+    compressed = re.sub(r'(发布|推出)(?:一款)?(?:可跑在|可运行在|可在)[^，。]{2,14}?的(?=开源模型|大模型|生成模型)', r'\1', compressed)
     compressed = re.sub(r'“[^”]{6,}”', '', compressed).strip(' ，,：:；;')
-    if 7 <= len(compressed) <= limit and not compressed.endswith(('将','并','和','与','及','为','在','对')):
+    if len(compressed) >= 7 and fits(compressed) and not compressed.endswith(('将','并','和','与','及','为','在','对')):
         return compressed
     # Use an intentionally general but complete headline instead of cutting a claim mid-sentence.
     for actor in ('OpenAI','Anthropic','Google','微软','英伟达','Meta','苹果','华为','DeepSeek','阿里','腾讯','百度','宇树','NVIDIA'):
@@ -447,7 +504,7 @@ def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
 
 people = [
-    ('黄仁勋', '英伟达CEO'), ('奥尔特曼', 'OpenAI CEO'),
+    ('黄仁勋', '英伟达联合创始人'), ('奥尔特曼', 'OpenAI CEO'),
     ('苏姿丰', 'AMD CEO'), ('纳德拉', '微软CEO'),
     ('李飞飞', 'AI科学家'), ('马斯克', 'xAI创始人'),
     ('李彦宏', '百度创始人'), ('吴泳铭', '阿里巴巴CEO'),
@@ -466,47 +523,14 @@ people = [
     ('Dario Amodei', 'Anthropic CEO'), ('Yann LeCun', 'AI科学家'),
     ('Geoffrey Hinton', 'AI科学家'), ('Jeff Dean', 'Google首席科学家'),
     ('Sundar Pichai', 'Alphabet CEO'), ('Mark Zuckerberg', 'Meta CEO'),
-    ('Satya Nadella', '微软CEO'), ('Jensen Huang', '英伟达CEO'),
+    ('Satya Nadella', '微软CEO'), ('Jensen Huang', '英伟达联合创始人'),
     ('Sam Altman', 'OpenAI CEO'), ('Fei-Fei Li', 'AI科学家'),
     ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
+    ('Ian Buck', '英伟达高性能计算副总裁'),
+    ('Yossi Matias', 'Google Research负责人'),
 ]
-# 开放式人物候选：从新闻报道本身识别人名；上面的名单仅作补充，不是准入限制。
-leaders, selected, leader_names = [], [], []
-leader_queries = ['人工智能 教师 分享', 'AI 医生 应用 表示', 'AI 创业者 介绍', 'AI 工程师 研发', '人工智能 学者 观点', 'AI 设计师 创作', '机器人 创始人 表示', '大模型 产品负责人 介绍']
-# 直接 RSS 只抓取一次48小时窗口，再按新闻18小时过滤，避免重复请求30个源。
-leader_direct_news = direct_feed_rows(max_age_hours=48)
-direct_news = [r for r in leader_direct_news if r.get('age_hours', 999) <= 18]
-leader_rows = gather(leader_queries, leader=True)
-# 直接媒体 RSS 自带事实摘要，优先补充其中真正涉及具体人物的报道。
-leader_rows += [r for r in leader_direct_news if valid_description(r)]
-# 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
-leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
-# 直接以中文检索具体人物，减少英文翻译服务限流造成的遗漏。
-# 人物栏目补充实际应用者与从业者；48小时内真实媒体报道，不预设必须是科技巨头。
-leader_rows += gather([
-    'AI 教师 教学 分享', '人工智能 医生 临床 介绍',
-    'AI 设计师 创作 分享', '人工智能 工程师 研发 表示',
-    'AI 创业者 应用 发布', '机器人 研究员 介绍',
-    '大模型 产品经理 表示', 'AI 学者 研究 发现',
-    'AI 导演 影视 制作', 'AI 程序员 开发者 分享',
-    '人工智能 科研团队 教授 介绍', '智能体 创始人 访谈',
-], leader=True)
-leader_rows += gather(['奥尔特曼 人工智能 发布', '黄仁勋 人工智能 芯片', '马斯克 xAI 模型', '李飞飞 世界模型', '苏姿丰 AMD AI', '皮查伊 谷歌 Gemini', '纳德拉 微软 AI', '梁文锋 DeepSeek', '王兴兴 宇树 机器人', '阿莫迪 Anthropic', '扎克伯格 Meta AI', '杨立昆 AI', '辛顿 人工智能'], leader=True)
-# 对人物栏目增加媒体定向检索，避免通用“科技人物”搜索被无关资讯淹没。
-leader_rows += gather([
-    'AI CEO site:ithome.com', '人工智能 创始人 site:qbitai.com',
-    'AI 科学家 site:tmtpost.com', 'AI 创始人 site:techcrunch.com',
-    '机器人 CEO site:36kr.com', '大模型 负责人 site:ithome.com',
-    'AI 首席科学家 site:chinanews.com.cn',
-], leader=True)
-leader_rows += gather([
-    'Sam Altman AI announcement', 'Jensen Huang AI statement',
-    'Dario Amodei Anthropic', 'Demis Hassabis DeepMind',
-    'Sundar Pichai Gemini', 'Satya Nadella AI',
-    'Mark Zuckerberg AI', 'Elon Musk xAI',
-    'Fei-Fei Li world model', 'Andrew Ng artificial intelligence',
-], leader=True, international=True)
-# 把已有名单中的名字作为识别提示，同时识别新闻标题中的中文姓名和英文姓名。
+
+
 name_roles = dict(people)
 def identify_person(title):
     # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
@@ -515,22 +539,17 @@ def identify_person(title):
     for name, role in name_roles.items():
         if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
             return name, role
-    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁|工程师|教师|医生|设计师|创业者|开发者|学者|导演|作者|产品经理)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
-    # “CEO预测”“科学家表示”等标题不是姓名；拒绝把普通动词当人名。
-    if m and m.group(1) not in ('预测','表示','认为','透露','宣布','发布','警告','指出','建议','回应','分析','称赞','谈论','介绍','发现','研究','专家','团队','未来','人工','智能','最新','全球','公司','行业'):
-        return m.group(1), '科技人物'
-    # 允许新闻中“姓名+职务”的人物，职务作为识别依据，不猜测没有身份信息的姓名。
-    m2 = re.search(r'([\\u4e00-\\u9fff]{2,3})(?:教授|研究员|工程师|教师|医生|设计师|创业者|开发者|学者|CEO|创始人|负责人|总裁|董事长)[：，称说表示认为谈\\s]', title)
-    if m2 and m2.group(1) not in ('人工','智能','公司','行业','科技','全球','预测','专家','研究','产品','应用','未来','技术','最新'):
-        return m2.group(1), 'AI相关从业者'
-    # 具名“身份 + 姓名”写法：例如“AI教师张三表示”。
-    m3 = re.search(r'(?:AI|人工智能|机器人|大模型)?(?:教师|医生|工程师|设计师|研究员|教授|创业者|开发者|学者|创始人|负责人)([\\u4e00-\\u9fff]{2,3})(?:表示|称|说|认为|介绍|分享|发布|指出|：|，)', title, re.I)
-    if m3 and m3.group(1) not in ('预测','表示','认为','发布','研究','专家','团队','公司','行业','科技','人工','智能','技术','应用','产品'):
-        return m3.group(1), 'AI相关从业者'
-    # 只凭标题开头的两个汉字无法可靠判断是人名，容易把“拷问”等动词当人物。
-    # 未列入明确人物名单的名字，需要具备职务及姓名的上下文。
+    role_pattern = r'科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁|工程师'
+    speech = r'表示|指出|介绍|发布|分享|宣布|展示|：'
+    match = re.search(rf'(?P<role>{role_pattern})\s*(?P<name>[\u4e00-\u9fff]{{2,3}})(?={speech})', title)
+    if match:
+        name = match['name']
+        common_surnames = '赵钱孙李周吴郑王冯陈蒋沈韩杨朱秦许何吕张孔曹严华金魏陶姜谢邹苏潘葛范彭袁柳唐薛雷贺罗郝马苗凤方任俞柳史韦贾路江郭林钟徐邱骆高蔡田叶胡刘黄杜梁宋郑夏汪傅顾孟白熊阮邵崔程陆石侯邓洪龚'
+        if name[0] in common_surnames:
+            return name, match['role']
     return None, None
-    return None, None
+
+
 def relevant_ai_person_event(title):
     """人物本人参与的AI事件；不把纯融资、债券或股市报道当人物动态。"""
     low = title.lower()
@@ -563,35 +582,8 @@ def eligible_person_report(row):
 
 def is_chinese_text(t):
     return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
-enrich_person_summaries(leader_rows, identify_person)
-# 记录人物候选在哪一道门槛被排除，便于定位真正瓶颈；不输出假新闻。
-person_rejections = {'no_name':0,'invalid_report':0,'not_chinese':0,'eligible':0}
-person_samples = []
-for candidate in leader_rows:
-    candidate_name, _ = identify_person(candidate['title'])
-    if not candidate_name:
-        reason='no_name'
-    elif not eligible_person_report(candidate):
-        reason='invalid_report'
-    elif not is_chinese_text(candidate['title']):
-        reason='not_chinese'
-    else:
-        reason='eligible'
-    person_rejections[reason] += 1
-    if reason == 'invalid_report' and len(person_samples) < 12:
-        person_samples.append({'name':candidate_name,'title':candidate['title'][:85],
-            'source':candidate.get('source',''), 'has_description':valid_description(candidate),
-            'score':score(candidate)})
-print('人物合格候选明细:', json.dumps([
-    {'name':identify_person(r['title'])[0], 'title':r['title'][:110],
-     'source':r.get('source',''), 'description_ok':valid_description(r),
-     'excluded_word':next((w for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\\u2019t','科技早报','或将','传闻') if w in r['title'].lower()), ''),
-     'has_ai':relevant_ai_person_event(r['title']+' '+r.get('description',''))}
-    for r in leader_rows if identify_person(r['title'])[0] and eligible_person_report(r)
-    and is_chinese_text(r['title'])
-][:25], ensure_ascii=False))
-print('人物候选诊断:', json.dumps(person_rejections, ensure_ascii=False))
-print('人物被排除样本:', json.dumps(person_samples, ensure_ascii=False))
+
+
 def person_specific_story(row, name):
     title = row['title']
     # 综合节目/资讯合集即使提到人名，也不是一条可核实的个人动态。
@@ -606,81 +598,13 @@ PERSON_ALIASES = {'Jensen Huang':'黄仁勋','Satya Nadella':'纳德拉','Sam Al
                   'Dario Amodei':'阿莫迪','Elon Musk':'马斯克','Sundar Pichai':'皮查伊',
                   'Demis Hassabis':'哈萨比斯','Fei-Fei Li':'李飞飞'}
 def person_key(name):
-    return PERSON_ALIASES.get(name, name).casefold()
-for r in sorted(leader_rows, key=score, reverse=True):
-    name, role = identify_person(r['title'])
-    if not name or person_key(name) in {person_key(n) for n in leader_names}: continue
-    if not eligible_person_report(r) or not person_specific_story(r, name): continue
-    if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
-    if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
-    if not is_chinese_text(r['title']) or not publishable_title(r, 23): continue
-    # 仅标题可核验时，以标题事实形成简讯，不冒充原文独立摘要。
-    if not valid_description(r):
-        r = dict(r, headline_only_person=True)
-    leaders.append({'name': name + '｜' + role, 'title': short_headline(r['title'], 23), 'body': article_body(r, 60), 'source': r['source']})
-    selected.append(r); leader_names.append(name)
-    if len(leaders) == 3: break
-# 绝不把普通科技新闻冒充人物动态；人物不足时继续拓展搜索。
-if len(leaders) < 3:
-    extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示', 'AI 教师 表示', 'AI 医生 介绍', 'AI 工程师 研发', '人工智能 教授 指出', '机器人 创业者 分享', 'AI 设计师 应用'], leader=True)
-    for r in extra:
-        name, role = identify_person(r['title'])
-        if not name or person_key(name) in {person_key(n) for n in leader_names} or not is_chinese_text(r['title']) or not eligible_person_report(r) or not person_specific_story(r, name) or not publishable_title(r, 23): continue
-        if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
-        if not valid_description(r):
-            r = dict(r, headline_only_person=True)
-        leaders.append({'name':name+'｜'+role,'title':short_headline(r['title'], 23),'body':article_body(r,60),'source':r['source']})
-        selected.append(r); leader_names.append(name)
-        if len(leaders)==3: break
+    aliases = dict(PERSON_ALIASES, **{
+        'Mark Zuckerberg': '扎克伯格', 'Yann LeCun': '杨立昆',
+        'Geoffrey Hinton': '辛顿', 'Andrew Ng': '吴恩达',
+    })
+    return aliases.get(name, name).casefold()
 
-used = {r['key'] for r in selected}
-news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
-# 国际媒体独立采集，不能只使用中国区中文搜索。
-international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
-news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
-# 不提供可靠公开 RSS 的权威媒体，按站点定向检索，仍严格执行18小时窗口。
-# 这只是补充发现渠道，不是限制新闻发布媒体的白名单。
-site_queries_cn = [
-    '人工智能 site:news.cn', 'AI site:people.com.cn',
-    '人工智能 site:chinanews.com.cn', 'AI site:huanqiu.com',
-    'AI site:jiqizhixin.com', '人工智能 site:qbitai.com',
-    '机器人 site:zhidx.com', 'AI site:36kr.com',
-]
-site_queries_en = [
-    'AI site:reuters.com/technology', 'AI site:bloomberg.com',
-    'artificial intelligence site:ft.com', 'AI site:techcrunch.com',
-    'AI site:technologyreview.com', 'AI site:venturebeat.com',
-    'AI site:spectrum.ieee.org',
-]
-# 用中文 Google News 搜索国际媒体原文，降低英文翻译限流导致的零国际新闻。
-site_queries_intl_zh = [
-    'OpenAI site:reuters.com', '人工智能 site:apnews.com',
-    'AI site:bloomberg.com', 'AI site:ft.com',
-    'OpenAI site:techcrunch.com', 'AI site:theverge.com',
-    '人工智能 site:technologyreview.com', 'AI site:wired.com',
-    'AI site:arstechnica.com', 'AI site:blogs.nvidia.com',
-]
-site_news = gather(site_queries_cn) + gather(site_queries_intl_zh) + gather(site_queries_en, international=True)
-news.extend(r for r in site_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
-news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
-# AIHOT 仅补充有原始链接、明确时间和来源的候选；沿用原有评分与去重。
-news.extend(r for r in aihot_candidates() if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
-print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
-if len(news) < 4:
-    raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4。保持原模板和新闻标准，停止出图。')
-# 新闻不再受预设配图词表限制，按媒体报道候选选取。
-news = sorted(news, key=score, reverse=True)
-# 优先兼顾国际媒体和中文媒体，并避免四条都来自同一来源。
-intl = [r for r in news if r in international_news or (r in direct_news and r['source'] not in ('量子位','机器之心','36氪'))]
-domestic = [r for r in news if r not in international_news]
-chosen = []
-for pool in (intl, domestic, intl, domestic, news):
-    for r in pool:
-        if r not in chosen and not any(similar(r['title'], x['title']) for x in chosen) and (r['source'] not in {x['source'] for x in chosen} or len(chosen) >= 3):
-            chosen.append(r); break
-    if len(chosen) == 4: break
-news = chosen if len(chosen) == 4 else news[:4]
-# 翻译服务可能限流。优先选取已有中文标题的新闻，避免英文截断出现在朋友圈。
+
 def is_chinese_ready(row):
     t = to_chinese(row['title'])
     return len(re.findall('[一-鿿]', t)) >= 8 and len(re.findall(r'[A-Za-z]', t)) <= len(t)*0.55
@@ -697,11 +621,11 @@ def quality_gate(row):
     raw = row.get('title','').lower()
     if any(x in raw for x in ('vacation','resort','holiday','ipo','listed','million dollars','billion dollars','investor','fundraising','funding','market nervous','market jitters','math breakthrough','mathematical breakthrough')):
         return False
-    if any(x in raw for x in ('retail investor','stock','shares','trading','trade','metal','copper',
+    if re.search(r'\b(?:stocks?|shares|trading|copper)\b', raw) or any(x in raw for x in ('retail investor',
                                'riemann','mathematical hypothesis','film trailer','movie poster',
                                'price plunge','selloff','financial market')):
         return False
-    chinese = to_chinese(row['title'])
+    chinese = row['title']
     if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想','度假村','度假','上市后','数学突破','特朗普账户','捐款','美元资助','电影海报')):
         return False
     if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','人工智能','模型','机器人','芯片','智能体')):
@@ -713,7 +637,7 @@ def relevant_ai_news(row):
     title = row['title'].lower()
     excluded = ('锡价','铜价','铝价','关税','跨境包裹','插混','燃油','混动','显卡驱动',
                 'geforce hotfix','game ready','股价','股票','债券','基金','汇率','楼市',
-                '房地产','融资轮','估值','价格暴跌','商品期货','金属','铜','抛售','市场','黎曼','数学猜想','riemann','hypothesis','selloff','metal','copper')
+                '房地产','融资轮','估值','价格暴跌','商品期货','金属','抛售','黎曼','数学猜想','riemann','hypothesis','selloff','metal','copper')
     if any(word in title for word in excluded): return False
     direct_ai = ('人工智能','大模型','语言模型','世界模型','智能体','ai应用','ai工具',
                  'ai模型','ai助手','ai芯片','ai机器人','机器人','机器学习',
@@ -723,229 +647,359 @@ def relevant_ai_news(row):
                  'ai model','robotics','robot')
     return any(word in title for word in direct_ai) or bool(re.search(r'(?<![a-z])ai(?![a-z])',title))
 
-INTERNATIONAL_PRIMARY_SOURCES = (
-    'reuters', 'associated press', 'ap news', 'bloomberg', 'bbc', 'financial times', 'the guardian', 'techcrunch', 'the verge',
-    'wired', 'ars technica', 'mit technology review', 'mit news',
-    'ieee spectrum', 'bloomberg', 'venturebeat', 'engadget',
-    'openai', 'google', 'deepmind', 'microsoft', 'nvidia',
-    'meta', 'github', 'hugging face', 'cloudflare'
-)
-def international_primary_source(row):
-    source = row.get('source', '').lower()
-    return any(name in source for name in INTERNATIONAL_PRIMARY_SOURCES)
 
-ready_pool = sorted(
-    [r for r in news + domestic + direct_news + international_news + site_news
-     if quality_gate(r) and relevant_ai_news(r) and is_chinese_ready(r) and publishable_title(r, 32) and publishable_title(r, 22) and score(r)>0 and editorial_eligible(r)
-     and short_headline(r['title'], 22) not in ('人工智能领域出现新进展', 'OpenAI发布AI新进展', 'Anthropic发布AI新进展', 'Google发布AI新进展', 'Meta发布AI新进展')],
-    key=lambda r: (international_primary_source(r), score(r), valid_description(r)),
-    reverse=True
-)
-new_selection = []
-# 国际主流媒体和AI机构优先填满4条，只有不足时才由国内媒体补齐。
-for pool, target in (([r for r in ready_pool if international_primary_source(r)], 4), (ready_pool, 4)):
-    for r in pool:
-        if r['key'] in {x['key'] for x in new_selection}: continue
-        if any(similar(r['title'], x['title']) for x in new_selection): continue
-        if r['source'] in {x['source'] for x in new_selection}: continue
-        new_selection.append(r)
-        if len(new_selection) >= target: break
-# 来源不足时放宽同媒体限制，但不放宽AI相关性与去重。
-if len(new_selection)<4:
-    for r in ready_pool:
-        if r['key'] not in {x['key'] for x in new_selection} and not any(similar(r['title'],x['title']) for x in new_selection):
-            new_selection.append(r)
-        if len(new_selection)==4: break
-print('国际主流来源入选:',sum(international_primary_source(r) for r in new_selection),'/',len(new_selection))
-if len(new_selection)<4:
-    report = {
-        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
-        'reason': f'具备独立摘要的中文新闻仅{len(new_selection)}/4条',
-        'diagnostics': {
-            'translation_service_rate_limited': translation_unavailable,
-            'all_news_candidates': len(news + domestic + direct_news + international_news),
-            'independent_summary_candidates': sum(valid_description(r) for r in news + domestic + direct_news + international_news),
-            'chinese_with_independent_summary': len(ready_pool),
-            'distinct_news_selected': len(new_selection),
-        },
-        'news_candidates': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description',''))[:240],
-             'has_independent_summary': valid_description(r), 'score': score(r)}
-            for r in sorted(news + domestic + direct_news + international_news, key=score, reverse=True)[:40]
-        ],
-        'note': '待人工审阅，不得直接作为正式新闻发布。'
-    }
-    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
-    raise RuntimeError('独立摘要中文新闻不足4条：已保存候选报告，停止出图')
-news = [dict(r, headline_only_news=not valid_description(r)) for r in new_selection]
 
-# 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
-# 未达标时工作流失败，不覆盖已发布的正式成品。
-UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\d+)?')
-def valid_summary(row):
-    if valid_description(row): return True
-    if row.get('headline_only_news') and relevant_ai_news(row) and len(row['title'].strip()) >= 10: return True
-    # 标题简讯只用于人物栏目：明确标记、真实姓名、中文事实与AI相关性。
-    # 不把重复标题伪装成独立摘要，也不放宽普通新闻标准。
-    return bool(row.get('headline_only_person')
-                and identify_person(row['title'])[0]
-                and eligible_person_report(row)
-                and len(row['title'].strip()) >= 9)
-
-if len(leaders) != 3:
-    # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
-    report = {
-        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
-        'reason': f'科技人物仅{len(leaders)}/3条；有效摘要新闻{len(ready_pool)}条',
-        'person_filter_diagnostics': {
-            'candidate_count': len(leader_rows),
-            'recognized_names': len([r for r in leader_rows if identify_person(r['title'])[0]]),
-            'recognized_with_independent_summary': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r)]),
-            'recognized_with_summary_and_eligible_source': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r) and editorial_eligible(r) and score(r)>=8]),
-            'recognized_with_chinese_title': len([r for r in leader_rows if identify_person(r['title'])[0] and valid_description(r) and editorial_eligible(r) and score(r)>=8 and is_chinese_text(r['title'])]),
-            'translation_rate_limited': translation_unavailable,
-        },
-        'recognized_person_details': [
-            {'title': r['title'], 'source': r['source'], 'name': identify_person(r['title'])[0],
-             'summary_ok': valid_description(r), 'eligible': editorial_eligible(r),
-             'score': score(r), 'chinese_title': is_chinese_text(r['title'])}
-            for r in leader_rows if identify_person(r['title'])[0]
-        ][:40],
-        'selected_person_candidates_unverified': leaders,
-        'person_search_candidates': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description',''))[:240],
-             'score': score(r), 'recognized_person': identify_person(r['title'])[0]}
-            for r in sorted(leader_rows, key=score, reverse=True)[:35]
-        ],
-        'news_candidates': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description',''))[:240], 'score': score(r)}
-            for r in ready_pool[:30]
-        ],
-        'note': '仅供编辑审阅，候选未完成独立事实核验，不能直接发布。'
-    }
-    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
-    raise RuntimeError(f'人物动态仅{len(leaders)}/3条，已输出待审候选报告，拒绝用占位新闻出图')
-# 出图前再检查人物标签，不能把动词、抽象词当作人名。
-INVALID_PERSON_NAMES = {'预测','表示','认为','透露','宣布','发布','警告','指出','建议','回应','分析','介绍','研究','专家','团队','未来'}
-if any(p['name'].split('｜')[0] in INVALID_PERSON_NAMES for p in leaders):
-    raise RuntimeError('人物栏目识别到非人名，拒绝出图')
-if any(not valid_summary(r) for r in news + selected):
-    invalid = [r for r in news + selected if not valid_summary(r)]
-    report = {
-        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
-        'reason': f'{len(invalid)}条入选内容缺少独立摘要',
-        'invalid_selected_items': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description', ''))[:250],
-             'person': identify_person(r['title'])[0]}
-            for r in invalid
-        ],
-        'selected_news': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description', ''))[:250]}
-            for r in news
-        ],
-        'selected_people': [
-            {'title': r['title'], 'source': r['source'],
-             'description': tidy(r.get('description', ''))[:250],
-             'person': identify_person(r['title'])[0]}
-            for r in selected
-        ],
-        'note': '仅用于编辑诊断；禁止将标题改写当作独立事实摘要。'
-    }
-    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
-    raise RuntimeError(f'{len(invalid)}条入选内容缺少独立摘要，已输出待审报告，拒绝出图')
-if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
-    raise RuntimeError('发现未经独立确认的模型版本号，停止出图')
-
-issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
-data = {
-    'issue': issue, 'date': TODAY.isoformat(),
-    'headline': {'title': short_headline(news[0]['title'], 32), 'body': article_body(news[0], 88), 'source': news[0]['source']},
-    'updates': [{'tag': tag, 'title': short_headline(r['title'], 22), 'body': article_body(r, 48), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
-    'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
-}
-# 最终出图闸门：标题可能经过缩写，必须同时检查正文与来源。
-# 宁可停止本期出图，也不能把博彩广告或明显污染的内容自动发布。
 EDITORIAL_BLOCKLIST = (
     '博彩', '竞猜', '投注平台', '在线登陆官网', '在线登录官网', '米乐app',
     'm6米乐', '现金网', '体育投注', 'betting', 'casino', 'gambling',
     '沙巴官网', '推广链接', '点击注册', '邀请码',
 )
-def validate_final_editorial(payload):
-    problems = []
-    cards = [('headline', payload['headline'])]
-    cards += [(f'updates[{i}]', card) for i,card in enumerate(payload['updates'])]
-    cards += [(f'leaders[{i}]', card) for i,card in enumerate(payload['leaders'])]
-    for label, card in cards:
-        combined = ' '.join(str(card.get(k, '')) for k in ('name','title','body','source')).lower()
-        bad = next((w for w in EDITORIAL_BLOCKLIST if w.lower() in combined), None)
-        if bad: problems.append({'slot':label, 'reason':'blocked_advertising_term', 'term':bad})
-        if not card.get('source') or card.get('source') == '—':
-            problems.append({'slot':label, 'reason':'missing_source'})
-    if problems:
-        path = OUT / 'editorial_review.json'
-        path.write_text(json.dumps({'issue':payload['issue'],'date':payload['date'],'problems':problems,'status':'rejected'},ensure_ascii=False,indent=2),encoding='utf-8')
-        raise RuntimeError('最终编辑检查未通过，已阻止出图：'+json.dumps(problems,ensure_ascii=False))
-validate_final_editorial(data)
-# International mainstream media are preferred; shortage is logged, not a fatal error.
-print('国际媒体优先：本期国际主流媒体', sum(international_primary_source(item) for item in news[:4]), '/4')
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page(viewport={'width': 1100, 'height': 1900})
-    page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
-    import functools, http.server, threading
-    handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler,
-        directory=str(ROOT)
-    )
-    server = http.server.ThreadingHTTPServer(
-        ('127.0.0.1', 0), handler
-    )
-    threading.Thread(
-        target=server.serve_forever, daemon=True
-    ).start()
-    page.goto(
-        f'http://127.0.0.1:{server.server_port}/index.html',
-        wait_until='load'
-    )
 
-    page.evaluate('document.fonts.ready')
-    # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
-    news_image_count = 0
-    used_image_pages = set()
-    for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-        uri, matched = fetch_news_image(row['title'], used_image_pages)
-        if uri:
-            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
-            print('新闻配图:', key, matched)
-            news_image_count += 1
-    print('成功加载新闻相关配图:', news_image_count, '/4')
-    # 缺图不阻断出图，沿用原模板的图片占位设计。
-    # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
-    portrait_count = 0
-    for i, person in enumerate(leader_names):
-        uri = fetch_portrait(person)
-        if uri:
-            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
-            portrait_count += 1
-    print('成功加载人物照片:', portrait_count, '/', len(leader_names))
-    # 无肖像的新闻人物使用原模板占位，不能因此中断出图。
-    page.wait_for_timeout(800)
-    error = page.locator('#errors').inner_text()
-    if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
-        raise RuntimeError('原版地球图标加载失败，停止导出')
-    if error.strip():
-        print('模板文字提醒:', error)
-    png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
-    (OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
-    (OUT / '洪滨每日AI早报.png').write_bytes(base64.b64decode(png))
-    browser.close()
-    server.shutdown()
-state['last_issue'] = int(issue)
-state['items'] = (state['items'] + [{'key': r['key'], 'title': r['title'], 'date': TODAY.isoformat()} for r in news + selected])[-500:]
-HISTORY.write_text(json.dumps(state, ensure_ascii=False, indent=2), 'utf-8')
-print('已生成', OUT / '洪滨每日AI早报.png')
+
+def render_png(data, news, leader_names):
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, executable_path=os.environ.get('HONG_BIN_CHROMIUM'))
+        page = browser.new_page(viewport={'width': 1100, 'height': 1900})
+        page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
+        import functools, http.server, threading
+        handler = functools.partial(
+            http.server.SimpleHTTPRequestHandler,
+            directory=str(ROOT)
+        )
+        server = http.server.ThreadingHTTPServer(
+            ('127.0.0.1', 0), handler
+        )
+        threading.Thread(
+            target=server.serve_forever, daemon=True
+        ).start()
+        page.goto(
+            f'http://127.0.0.1:{server.server_port}/index.html',
+            wait_until='load'
+        )
+
+        page.evaluate('document.fonts.ready')
+        # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
+        news_image_count = 0
+        used_image_pages = set()
+        for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
+            uri, matched = fetch_news_image(row['title'], used_image_pages)
+            if uri:
+                page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
+                print('新闻配图:', key, matched)
+                news_image_count += 1
+        print('成功加载新闻相关配图:', news_image_count, '/4')
+        # 缺图不阻断出图，沿用原模板的图片占位设计。
+        # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
+        portrait_count = 0
+        for i, person in enumerate(leader_names):
+            uri = fetch_portrait(person)
+            if uri:
+                page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
+                portrait_count += 1
+        print('成功加载人物照片:', portrait_count, '/', len(leader_names))
+        # 无肖像的新闻人物使用原模板占位，不能因此中断出图。
+        page.wait_for_timeout(800)
+        error = page.locator('#errors').inner_text()
+        if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
+            raise RuntimeError('原版地球图标加载失败，停止导出')
+        if error.strip():
+            raise ValueError(error)
+        png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
+        browser.close()
+        server.shutdown()
+        server.server_close()
+        return base64.b64decode(png)
+
+
+EVENT_TERMS = (
+    ('release', r'发布|推出|上线|开放|开源|\breleas\w*|\blaunch\w*|\bunveil\w*|\bintroduc\w*'),
+    ('research', r'研究|论文|实验|突破|评测|基准|\bresearch\b|\bbenchmark\b|\bstudy\b'),
+    ('deployment', r'部署|接入|落地|应用于|用于|投入使用|\bdeploy\w*|\bintegrat\w*'),
+    ('hardware', r'机器人|芯片|加速器|量产|\brobot\w*|\bchips?\b|\bgpus?\b'),
+)
+MODEL_TOKEN = re.compile(r'(?<![a-z0-9])(?:gpt|gemini|claude|qwen|deepseek|grok|kimi|glm|llama|inkling)'
+                         r'[ -]?(?:[a-z]+[ -]+)?\d+(?:\.\d+)*[a-z]?(?![a-z0-9])', re.I)
+LOW_SUBSTANCE = re.compile(r'论坛|双店|门店|开业|展位|亮相.{0,10}(?:展|会)|参展|签约仪式|座谈|'
+                           r'推广|软文|赞助内容|抽奖|福利券|\bsponsored\b|\bgiveaway\b', re.I)
+PERSON_ACTION = re.compile(r'发布|展示|证实|解释|指出|宣布|表示|提出|开源|分享|介绍|'
+                           r'\b(?:announc|publish|show|demonstrat|discuss|explain|say|said|present|launch|introduc|reveal)\w*', re.I)
+UNCONFIRMED = re.compile(r'未经证实|尚无证据|尚待验证|有传言|疑似|消息人士|爆料|泄露|援引招聘信息|'
+                         r'\b(?:unverified|unconfirmed|rumou?r|allegedly|leak|ouster)\w*', re.I)
+BRIEFING_ROLES = {'AI科学家', 'AI研究者', 'AI企业家', 'AI教育与研究者', '机器人研究者', '计算机科学家'}
+ROLE_CONTEXT = r'科学家|创始人|CEO|首席|教授|研究员|工程师|董事长|负责人|总裁|researcher|professor|founder|chief|engineer'
+
+
+def event_profile(title):
+    return {label for label, pattern in EVENT_TERMS if re.search(pattern, title, re.I)}
+
+
+def model_tokens(title):
+    return {re.sub(r'[\s-]', '', m.group().lower()) for m in MODEL_TOKEN.finditer(title)}
+
+
+def duplicate_event(row, previous):
+    previous_url = previous.get('canonical_url') or canonical_url(previous.get('article_url'))
+    if row['key'] == previous.get('key') or row['canonical_url'] == previous_url:
+        return True
+    earlier = previous.get('title', '')
+    current = row['title']
+    models = model_tokens(current)
+    earlier_models = model_tokens(earlier)
+    current_events, earlier_events = event_profile(current), event_profile(earlier)
+    if similar(current, earlier):
+        # A distinct model version or a confirmed deployment following a release can advance a story.
+        if models and earlier_models and models.isdisjoint(earlier_models):
+            return False
+        if row['official'] and 'deployment' in current_events and 'deployment' not in earlier_events:
+            return False
+        return True
+    return bool(models & earlier_models and current_events & earlier_events & {'release', 'deployment'})
+
+
+def blocked(row):
+    text = ' '.join(row.get(k, '') for k in ('title', 'original_title', 'description', 'source', 'body'))
+    lowered = text.lower()
+    return (any(term in lowered for term in EDITORIAL_BLOCKLIST)
+            or bool(LOW_SUBSTANCE.search(text) or UNCONFIRMED.search(text))
+            or not editorial_eligible(row))
+
+
+def editorial_rank(row):
+    events = event_profile(row['title'])
+    return (score(row) + 10 * row['official'] + 5 * len(events)
+            + min(6, row['heat'] / 16) - min(12, row['age_hours'] / 16))
+
+
+def short_body(row, limit):
+    if not valid_description(row):
+        return ''
+    text = to_chinese(row['description'])
+    title = to_chinese(row['title'])
+    for sentence in re.split(r'(?<=[。！？])|(?<=[.!?])\s+', text):
+        body = complete_excerpt(sentence, limit)
+        if (body and len(re.findall(r'[\u4e00-\u9fff]', body)) >= 8 and not similar(body, title)
+                and not body.startswith(('据', '随着', '为了', '除了', '当时', '在此背景下', '其中'))):
+            return body
+    return ''
+
+
+def enrich(row):
+    if valid_description(row):
+        return row
+    summary = article_meta_summary(row['article_url'])
+    return {**row, 'description': summary} if summary else row
+
+
+def choose_people(rows, history):
+    people_cards, selected, names = [], [], []
+    for row in rows:
+        name, role = identify_person(row['title'])
+        story = row
+        if not name or not PERSON_ACTION.search(row['title']):
+            lead = re.split(r'(?<=[。！？])|(?<=[.!?])\s+', row['description'], maxsplit=1)[0]
+            lead_name, lead_role = identify_person(lead)
+            if lead_name in name_roles and PERSON_ACTION.search(lead):
+                name, role = lead_name, lead_role
+                story = {**row, 'title': lead}
+        action = PERSON_ACTION.search(story['title'])
+        subject = story['title'].casefold().find(name.casefold()) if name else -1
+        if (not name or not action or subject < 0 or not 0 < action.start() - subject <= len(name) + 20
+                or person_key(name) in {person_key(n) for n in names}
+                or blocked(row) or not eligible_person_report(story)
+                or not person_specific_story(story, name) or not PERSON_ACTION.search(story['title'])
+                or any(duplicate_event(row, other) for other in history + selected)):
+            continue
+        row = enrich(row)
+        if blocked(row):
+            continue
+        if role in BRIEFING_ROLES and not re.search(ROLE_CONTEXT, row['title'] + row['description'], re.I):
+            continue
+        if not is_chinese_text(story['title']) or not publishable_title(story, 23):
+            continue
+        body = short_body(row, 54)
+        headline = short_headline(story['title'], 23)
+        if similar(headline, body):
+            continue
+        if not body:
+            continue
+        stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
+        people_cards.append({
+            'name': name + '｜' + role, 'title': headline, 'body': body,
+            'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
+            'url': row['article_url'], 'discovered_via': row['discovered_via'],
+        })
+        selected.append(row)
+        names.append(name)
+        if len(selected) == 3:
+            break
+    return people_cards, selected, names
+
+
+def choose_news(rows, history, people_rows):
+    selected, cards = [], []
+    eligible = [r for r in rows if in_window(r, NEWS_HOURS) and not blocked(r)
+                and relevant_ai_news(r) and quality_gate(r) and event_profile(r['title'])]
+    # Reserve one slot for each region when publishable, then prefer different publishers.
+    for region, distinct in [('international', True), ('CN', True)] + [(None, True)] * 4 + [(None, False)] * 4:
+        if len(selected) == 4:
+            break
+        for row in eligible:
+            if region and row['region'] != region:
+                continue
+            if distinct and row['source'] in {item['source'] for item in selected}:
+                continue
+            if any(duplicate_event(row, other) for other in history + people_rows + selected):
+                continue
+            title_limit, body_limit = (32, 73) if not selected else (22, 48)
+            if not is_chinese_ready(row) or not publishable_title(row, title_limit):
+                continue
+            headline = short_headline(row['title'], title_limit)
+            # Abbreviating a long headline must retain the technology and the event.
+            if not relevant_ai_news({'title': headline}) or not event_profile(headline):
+                continue
+            row = enrich(row)
+            if blocked(row):
+                continue
+            body = short_body(row, body_limit)
+            if not body or similar(headline, body):
+                continue
+            cards.append({
+                'title': headline, 'body': body,
+                'source': row['source'], 'url': row['article_url'],
+                'published_at': row['published_at'], 'discovered_via': row['discovered_via'],
+            })
+            selected.append(row)
+            break
+    return cards, selected
+
+
+def collect():
+    queries = [
+        ('AI 模型 发布 机器人 芯片', False, False),
+        ('AI robotics models research chip launch', False, True),
+        ('AI 创始人 科学家 发布 机器人', True, False),
+        ('AI CEO scientist announces robot models', True, True),
+        ('黄仁勋 奥尔特曼 李飞飞 梁文锋 杨植麟 人工智能', True, False),
+    ]
+    for source in SOURCE_REGISTRY:
+        if source['type'] == 'web' and source.get('official'):
+            domain = source.get('domain', host(source['url']))
+            queries.append((f'site:{domain} AI', True, source['region'] != 'CN'))
+    stats, rows = {}, []
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        aihot = pool.submit(aihot_candidates)
+        feeds = [(source['name'], pool.submit(direct_feed, source)) for source in FEEDS]
+        searches = [(q[0], pool.submit(search, *q)) for q in queries]
+        for name, future in feeds + searches:
+            try:
+                value = future.result()
+                gathered, raw = value if isinstance(value, tuple) else (value, None)
+                stats[name] = {'raw_feed_entries': raw, 'valid_18h': sum(in_window(r, NEWS_HOURS) for r in gathered),
+                               'valid_person_window': len(gathered)}
+                rows.extend(gathered)
+            except (OSError, ValueError, ET.ParseError) as exc:
+                stats[name] = {'error': str(exc)[:200]}
+        aihot_rows, aihot_stats = aihot.result()
+    rows.extend(aihot_rows)
+    stats['AIHOT'] = aihot_stats
+    ranked = sorted(rows, key=editorial_rank, reverse=True)
+    by_url = {}
+    for row in ranked:
+        by_url.setdefault(row['canonical_url'], row)
+    return sorted(by_url.values(), key=editorial_rank, reverse=True), stats
+
+
+def write_json(path, data):
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def final_problems(news_cards, people_cards):
+    problems = []
+    if len(news_cards) != 4 or len(people_cards) != 3:
+        problems.append(f'栏目数量不足：新闻 {len(news_cards)}/4，人物 {len(people_cards)}/3')
+    for card in news_cards + people_cards:
+        if not all(card.get(key) for key in ('title', 'body', 'source', 'url', 'published_at')):
+            problems.append(f'缺少标题、正文或溯源字段：{card.get("title")}')
+        if not publisher_for(card['url']) or blocked(card):
+            problems.append(f'来源或正文未通过检查：{card["title"]}')
+    return problems
+
+
+def main():
+    parser = ArgumentParser()
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--test', action='store_true', help='isolated output, read-only published history (default)')
+    mode.add_argument('--formal', action='store_true', help='write validated output and update history')
+    parser.add_argument('--as-of', help='timezone-aware reference time (test mode only)')
+    args = parser.parse_args()
+    test_mode = not args.formal
+    global NOW
+    if args.as_of:
+        when = parse_date(args.as_of)
+        if not test_mode or not when:
+            parser.error('--as-of requires test mode and a timezone-aware timestamp')
+        NOW = when
+    today = NOW.astimezone(BEIJING).date().isoformat()
+    state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
+    same_day = any(item.get('date') == today for item in state['items'][-7:])
+    issue = str(int(state.get('last_issue', 2)) + (0 if same_day else 1)).zfill(3)
+    history = [item for item in state['items'] if item.get('date', '') < today]
+    out = ROOT / ('test-output' if test_mode else 'output')
+    out.mkdir(exist_ok=True)
+    rows, stats = collect()
+    eligible_history = [row for row in rows if not any(duplicate_event(row, old) for old in history)]
+    people_cards, people_rows, names = choose_people(eligible_history, [])
+    news_cards, news_rows = choose_news(eligible_history, [], people_rows)
+    problems = final_problems(news_cards, people_cards)
+    selected = news_rows + people_rows
+    stats['AIHOT']['selected_news'] = sum(row['discovered_via'] == 'AIHOT' for row in news_rows)
+    stats['AIHOT']['selected_people'] = sum(row['discovered_via'] == 'AIHOT' for row in people_rows)
+    report = {
+        'date': today, 'as_of_utc': NOW.isoformat(), 'issue_preview': issue,
+        'sources': stats, 'unique_candidates': len(rows), 'history_rejected': len(rows) - len(eligible_history),
+        'news_selected': news_cards, 'people_selected': people_cards,
+        'candidates': eligible_history[:40], 'problems': problems,
+    }
+    print(json.dumps({key: report[key] for key in ('date', 'unique_candidates', 'history_rejected', 'problems')},
+                     ensure_ascii=False))
+    print('AIHOT:', json.dumps(stats['AIHOT'], ensure_ascii=False))
+    if not problems:
+        data = {
+            'issue': issue, 'date': today, 'headline': news_cards[0],
+            'updates': [dict(card, tag=tag) for tag, card in zip(['AI动态', '产品应用', '前沿科技'], news_cards[1:])],
+            'leaders': people_cards,
+        }
+        try:
+            png = render_png(data, news_rows, names)
+        except Exception as exc:
+            problems.append(f'固定模板出图失败：{exc}')
+    report['status'] = 'needs_editorial_review' if problems else 'ready'
+    if test_mode or problems:
+        write_json(out / 'editorial_review.json', report)
+    if problems:
+        print('待编辑审核：' + '；'.join(problems))
+        return 2
+    with TemporaryDirectory(dir=out) as directory:
+        stage = Path(directory)
+        write_json(stage / 'daily.json', data)
+        (stage / '洪滨每日AI早报.png').write_bytes(png)
+        if not test_mode:
+            state['last_issue'] = int(issue)
+            state['items'] = (state['items'] + [
+                {key: row[key] for key in ('key', 'title', 'article_url', 'canonical_url')} | {'date': today}
+                for row in selected if not any(old.get('key') == row['key'] and old.get('date') == today
+                                               for old in state['items'])
+            ])[-500:]
+            write_json(stage / 'published_history.json', state)
+        for name in ('daily.json', '洪滨每日AI早报.png'):
+            (stage / name).replace(out / name)
+        if not test_mode:
+            (stage / 'published_history.json').replace(HISTORY)
+    print('已生成', out / '洪滨每日AI早报.png')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
