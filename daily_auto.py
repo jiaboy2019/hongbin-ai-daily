@@ -1,5 +1,6 @@
-import base64, datetime as dt, hashlib, html, json, re, urllib.parse, urllib.request
+import base64, datetime as dt, hashlib, html, json, re, urllib.parse, urllib.request, io
 from email.utils import parsedate_to_datetime
+from PIL import Image
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -18,7 +19,7 @@ last_dates = [x.get('date') for x in state['items']]
 SAME_DAY = TODAY.isoformat() in last_dates[-7:]
 
 # 仅调整新闻筛选；原网页模板、图标、画布与栏目布局均保持不变。
-EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词')
+EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词', '培训', '培训机构', '横向测评', '辞职', '利润翻倍', '亏超', '新媒体创作', '课程体系', '技能培训班', '抵押的AI芯片')
 SIGNALS = ('发布', '推出', '上线', '开源', '突破', '模型', '机器人', '芯片', '智能体', 'Agent', '研发', '科研', '应用', '功能', '升级', '世界模型', '编程', '自动化')
 def score(row):
     title = row['title']
@@ -75,6 +76,32 @@ def gather(queries):
             print('RSS query failed:', q, e)
     return sorted(rows, key=score, reverse=True)
 
+
+# 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
+PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)'}
+
+def fetch_portrait(name):
+    title = PERSON_PAGES.get(name)
+    if not title: return None
+    url = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + urllib.parse.quote(title)
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent':'HongbinDaily/1.0 (contact: github.com/jiaboy2019/hongbin-ai-daily)'})
+        with urllib.request.urlopen(req, timeout=12) as response:
+            page = json.load(response)
+        photo = (page.get('thumbnail') or {}).get('source')
+        if not photo: return None
+        req = urllib.request.Request(photo, headers={'User-Agent':'HongbinDaily/1.0'})
+        with urllib.request.urlopen(req, timeout=12) as response:
+            content = response.read(3_000_000)
+        im = Image.open(io.BytesIO(content)).convert('RGB')
+        im.thumbnail((600,600))
+        out = io.BytesIO()
+        im.save(out, format='JPEG', quality=82)
+        return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+    except Exception as exc:
+        print('人物照片下载失败:', name, exc)
+        return None
+
 def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
 
@@ -84,13 +111,14 @@ people = [
     ('李飞飞', 'AI科学家'), ('马斯克', 'xAI创始人'),
     ('李彦宏', '百度创始人'), ('吴泳铭', '阿里巴巴CEO'),
 ]
-leaders, selected = [], []
+leaders, selected, leader_names = [], [], []
 for name, role in people:
     found = [r for r in gather([name + ' 人工智能']) if name in r['title']]
     if found:
         r = sorted(found, key=score, reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
         selected.append(r)
+        leader_names.append(name)
     if len(leaders) == 3:
         break
 
@@ -128,6 +156,14 @@ with sync_playwright() as p:
     )
 
     page.evaluate('document.fonts.ready')
+    # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
+    portrait_count = 0
+    for i, person in enumerate(leader_names):
+        uri = fetch_portrait(person)
+        if uri:
+            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
+            portrait_count += 1
+    print('成功加载人物照片:', portrait_count, '/', len(leader_names))
     page.wait_for_timeout(800)
     error = page.locator('#errors').inner_text()
     if error.strip():
