@@ -42,8 +42,8 @@ def tidy(s):
 def norm(s):
     return hashlib.sha256(re.sub(r'[^\w\u4e00-\u9fff]', '', s.lower()).encode()).hexdigest()[:20]
 
-def search(q, leader=False):
-    params = urllib.parse.urlencode({'q': q + ' when:1d', 'hl':'zh-CN','gl':'CN','ceid':'CN:zh-Hans'})
+def search(q, leader=False, international=False):
+    params = urllib.parse.urlencode({'q': q + ' when:1d', 'hl':'en-US' if international else 'zh-CN','gl':'US' if international else 'CN','ceid':'US:en' if international else 'CN:zh-Hans'})
     req = urllib.request.Request('https://news.google.com/rss/search?' + params, headers={'User-Agent':'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=25) as f:
         root = ET.fromstring(f.read())
@@ -60,16 +60,20 @@ def search(q, leader=False):
             if not (0 <= age <= 18 * 3600): continue
         except (ValueError, TypeError, AttributeError):
             continue
-        row = {'title': title, 'source': source[:16], 'key': k}
+        description = tidy(x.findtext('description', ''))
+        # Google News 的描述常为标题/相关新闻列表；仅在有独立文本时使用。
+        if description.startswith(title): description = description[len(title):].strip(' -—:：')
+        if len(description) < 24 or description.lower().startswith('view full coverage'): description = ''
+        row = {'title': title, 'source': source[:30], 'key': k, 'description': description}
         if k not in old and len(title) >= 10 and (leader or score(row) > 0) and not any(similar(title, p['title']) for p in state['items'][-100:]):
             rows.append(row)
     return rows
 
-def gather(queries, leader=False):
+def gather(queries, leader=False, international=False):
     rows, used = [], set()
     for q in queries:
         try:
-            for r in search(q, leader=leader):
+            for r in search(q, leader=leader, international=international):
                 if r['key'] not in used:
                     rows.append(r); used.add(r['key'])
         except Exception as e:
@@ -122,12 +126,24 @@ NEWS_IMAGE_PAGES = [
     ('大模型', 'Large_language_model'), ('智能体', 'Intelligent_agent'),
     ('芯片', 'Integrated_circuit'), ('AI', 'Artificial_intelligence'),
 ]
-def fetch_news_image(title):
-    for keyword, page in NEWS_IMAGE_PAGES:
-        if keyword.lower() in title.lower():
-            uri = fetch_wiki_thumbnail(page)
-            if uri: return uri, keyword
+def fetch_news_image(title, used_pages=None):
+    used_pages = used_pages if used_pages is not None else set()
+    candidates = [(word, page) for word, page in NEWS_IMAGE_PAGES if word.lower() in title.lower()]
+    # 先用明确品牌、产品或技术实体，避免泛用的“机器人”“AI”反复出现同一张图。
+    candidates.sort(key=lambda pair: (pair[1] in used_pages, pair[0] in ('AI','机器人','人工智能')))
+    for keyword, page in candidates:
+        if page in used_pages: continue
+        uri = fetch_wiki_thumbnail(page)
+        if uri: used_pages.add(page); return uri, keyword
     return None, None
+
+def article_body(row, limit):
+    title = row['title'].strip()
+    desc = row.get('description', '').strip()
+    if desc and desc.lower() not in title.lower() and title.lower() not in desc.lower():
+        return clip(desc, limit)
+    # RSS 未提供独立摘要时，不捏造新闻事实。以报道来源和原始标题补足信息。
+    return clip('据'+row['source']+'报道：'+title+'。', limit)
 
 def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
@@ -173,7 +189,7 @@ def identify_person(title):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
+    leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
 # 人物报道不够时从其他科技新闻补齐栏目，避免整个早报停产；不虚构人物。
@@ -186,16 +202,29 @@ if len(leaders) < 3:
 
 used = {r['key'] for r in selected}
 news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
+# 国际媒体独立采集，不能只使用中国区中文搜索。
+international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
+news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4 or len(leaders) < 3:
     raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
 # 新闻不再受预设配图词表限制，按媒体报道候选选取。
-news = sorted(news, key=score, reverse=True)[:4]
+news = sorted(news, key=score, reverse=True)
+# 优先兼顾国际媒体和中文媒体，并避免四条都来自同一来源。
+intl = [r for r in news if r in international_news]
+domestic = [r for r in news if r not in international_news]
+chosen = []
+for pool in (intl, domestic, intl, domestic, news):
+    for r in pool:
+        if r not in chosen and not any(similar(r['title'], x['title']) for x in chosen) and (r['source'] not in {x['source'] for x in chosen} or len(chosen) >= 3):
+            chosen.append(r); break
+    if len(chosen) == 4: break
+news = chosen if len(chosen) == 4 else news[:4]
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
-    'headline': {'title': clip(news[0]['title'], 25), 'body': clip(news[0]['title'], 55), 'source': news[0]['source']},
-    'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': clip(r['title'], 53), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
+    'headline': {'title': clip(news[0]['title'], 25), 'body': article_body(news[0], 88), 'source': news[0]['source']},
+    'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': article_body(r, 75), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders,
 }
 with sync_playwright() as p:
@@ -221,8 +250,9 @@ with sync_playwright() as p:
     page.evaluate('document.fonts.ready')
     # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
     news_image_count = 0
+    used_image_pages = set()
     for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-        uri, matched = fetch_news_image(row['title'])
+        uri, matched = fetch_news_image(row['title'], used_image_pages)
         if uri:
             page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
             print('新闻配图:', key, matched)
