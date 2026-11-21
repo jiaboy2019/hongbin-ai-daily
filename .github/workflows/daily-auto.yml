@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Retest recognized AI researchers and substantive-summary safeguards.
+# Diagnose selected news and leader items missing independent summaries.
