@@ -6,6 +6,8 @@ on:
       - '.github/workflows/daily-auto.yml'
       - 'daily_auto.py'
       - 'news_sources.json'
+      - 'editorial_media.json'
+      - 'index.html'
       - 'test_daily_auto.py'
   workflow_dispatch:
     inputs:

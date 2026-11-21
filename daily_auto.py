@@ -239,6 +239,7 @@ def candidate(title, url, published, description, via):
     return {
         'title': title, 'source': source['name'], 'key': norm(title),
         'article_url': url, 'canonical_url': normalized_url, 'published_at': when.isoformat(),
+        'published_at_beijing': when.astimezone(BEIJING).isoformat(),
         'age_hours': (NOW - when).total_seconds() / 3600,
         'description': tidy(description)[:600], 'discovered_via': via,
         'region': 'CN' if source.get('region') == 'CN' else 'international',
@@ -247,7 +248,11 @@ def candidate(title, url, published, description, via):
 
 
 def in_window(row, hours):
-    return 0 <= row['age_hours'] <= hours
+    published = parse_date(row.get('published_at'))
+    if published is None:
+        return False
+    local_age = NOW.astimezone(BEIJING) - published.astimezone(BEIJING)
+    return dt.timedelta() <= local_age <= dt.timedelta(hours=hours)
 
 
 def direct_feed(source):
@@ -399,68 +404,112 @@ def aihot_candidates():
     }
 
 
-# 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
-PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing', 'Sam Altman':'Sam_Altman','Jensen Huang':'Jensen_Huang','Demis Hassabis':'Demis_Hassabis','Dario Amodei':'Dario_Amodei','Sundar Pichai':'Sundar_Pichai','Satya Nadella':'Satya_Nadella','Mark Zuckerberg':'Mark_Zuckerberg','Fei-Fei Li':'Fei-Fei_Li','Geoffrey Hinton':'Geoffrey_Hinton','Yann LeCun':'Yann_LeCun','Andrew Ng':'Andrew_Ng'}
 
-def fetch_wiki_thumbnail(title):
-    if not title: return None
-    url = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + urllib.parse.quote(title)
+MEDIA = json.loads((ROOT / 'editorial_media.json').read_text('utf-8'))
+GENERIC_IMAGE = re.compile(r'(?:^|[/_.-])(?:logo|placeholder|default|avatar|favicon|site-icon)(?:[/_.-]|$)', re.I)
+
+
+def verified_person(name):
+    target = person_key(name)
+    today = NOW.astimezone(BEIJING).date()
+    for profile in MEDIA['people']:
+        if target not in {person_key(n) for n in [profile['name'], *profile.get('aliases', [])]}:
+            continue
+        checked = dt.date.fromisoformat(profile['verified_on'])
+        if abs((today - checked).days) <= 180:
+            return profile
+    return None
+
+
+@lru_cache(maxsize=80)
+def download_image(url):
+    if not url.startswith('https://'):
+        return None
     try:
-        req = urllib.request.Request(url, headers={'User-Agent':'HongbinDaily/1.0 (contact: github.com/jiaboy2019/hongbin-ai-daily)'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            page = json.load(response)
-        photo = (page.get('thumbnail') or {}).get('source')
-        if not photo: return None
-        req = urllib.request.Request(photo, headers={'User-Agent':'HongbinDaily/1.0'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            content = response.read(3_000_000)
-        im = Image.open(io.BytesIO(content)).convert('RGB')
-        im.thumbnail((600,600))
-        out = io.BytesIO()
-        im.save(out, format='JPEG', quality=82)
-        return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
-    except Exception as exc:
-        print('百科配图下载失败:', title, exc)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
+        with urllib.request.urlopen(req, timeout=7) as response:
+            if not response.geturl().startswith('https://'):
+                return None
+            blob = response.read(8_000_001)
+        if len(blob) > 8_000_000:
+            return None
+        with Image.open(io.BytesIO(blob)) as source:
+            if min(source.size) < 150 or max(source.size) > 8000:
+                return None
+            picture = source.convert('RGB')
+        picture.thumbnail((720, 720))
+        buffer = io.BytesIO()
+        picture.save(buffer, format='JPEG', quality=88)
+        bytes_out = buffer.getvalue()
+        return 'data:image/jpeg;base64,' + base64.b64encode(bytes_out).decode('ascii'), hashlib.sha256(bytes_out).hexdigest()
+    except (OSError, ValueError, Image.DecompressionBombError):
         return None
 
-# 中英文报道可能使用不同姓名写法；肖像只按已知对应人物匹配。
-PERSON_PORTRAIT_ALIASES = {
-    '姚顺雨': 'Yao_Shunyu', '梁文锋': 'Liang_Wenfeng',
-    'Demis Hassabis': 'Demis_Hassabis', 'Andrej Karpathy': 'Andrej_Karpathy',
-    'Jeff Dean': 'Jeff_Dean', 'François Chollet': 'François_Chollet',
-    'Dario Amodei': 'Dario_Amodei', 'Sundar Pichai': 'Sundar_Pichai',
-    'Ian Buck': 'Ian_Buck', 'Yossi Matias': 'Yossi_Matias',
-}
-def fetch_portrait(name):
-    page = PERSON_PAGES.get(name) or PERSON_PORTRAIT_ALIASES.get(name)
-    return fetch_wiki_thumbnail(page) if page else None
 
-# 只使用与新闻标题中明确出现的机构/产品对应的百科图片。
-# 这些是相关主体的示意配图，并非新闻现场照片；找不到时不以随机图片代替。
-NEWS_IMAGE_PAGES = [
-    ('OpenAI', 'OpenAI'), ('ChatGPT', 'ChatGPT'),
-    ('Gemini', 'Gemini_(chatbot)'), ('Google', 'Google'),
-    ('Meta', 'Meta_Platforms'), ('微软', 'Microsoft'),
-    ('Microsoft', 'Microsoft'), ('苹果', 'Apple_Inc.'),
-    ('Apple', 'Apple_Inc.'), ('英伟达', 'Nvidia'),
-    ('Nvidia', 'Nvidia'), ('AMD', 'Advanced_Micro_Devices'),
-    ('华为', 'Huawei'), ('特斯拉', 'Tesla,_Inc.'),
-    ('Tesla', 'Tesla,_Inc.'), ('百度', 'Baidu'),
-    ('阿里', 'Alibaba_Group'), ('腾讯', 'Tencent'),
-    ('小米', 'Xiaomi'), ('DeepSeek', 'DeepSeek'),
-    ('宇树', 'Unitree_Robotics'), ('Anthropic', 'Anthropic'),
-    ('无人出租车', 'Robotaxi'), ('自动驾驶', 'Robotaxi'), ('Robotaxi', 'Robotaxi'),
-    ('Waymo', 'Waymo'), ('Thinking Machines', 'Thinking_Machines_Lab'),
-]
-def fetch_news_image(title, used_pages=None):
-    used_pages = used_pages if used_pages is not None else set()
-    candidates = [(word, page) for word, page in NEWS_IMAGE_PAGES if word.lower() in title.lower()]
-    candidates.sort(key=lambda pair: (pair[1] in used_pages, -len(pair[0])))
-    for keyword, page in candidates:
-        if page in used_pages: continue
-        uri = fetch_wiki_thumbnail(page)
-        if uri: used_pages.add(page); return uri, keyword
-    return None, None
+@lru_cache(maxsize=40)
+def article_images(url):
+    """Use media attached to the verified original article, never a company-stock image lookup."""
+    source = publisher_for(url)
+    if not source:
+        return []
+    try:
+        request = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
+        with urllib.request.urlopen(request, timeout=6) as response:
+            if publisher_for(response.geturl()) != source:
+                return []
+            final_url = response.geturl()
+            page = response.read(950_000).decode(response.headers.get_content_charset('utf-8'), 'replace')
+        parser = ArticleMetadata()
+        parser.feed(page)
+        if parser.meta.get('og:type', '').lower() not in ('article', 'news.article') and not publisher_article(url):
+            return []
+        return [
+            {'url': urllib.parse.urljoin(final_url, value), 'evidence': url}
+            for key in ('og:image:secure_url', 'og:image', 'twitter:image')
+            if (value := parser.meta.get(key)) and not GENERIC_IMAGE.search(urllib.parse.urlsplit(value).path)
+        ]
+    except (OSError, ValueError, LookupError):
+        return []
+
+
+def media_candidates(card, person):
+    if person:
+        profile = verified_person(person)
+        return profile.get('images', []) if profile else []
+    url = card.get('article_url') or card.get('url', '')
+    for entry in MEDIA['articles']:
+        if canonical_url(entry['article']) == canonical_url(url):
+            return entry['images'] + article_images(url)
+    return article_images(url)
+
+
+def prepare_images(news, leaders):
+    slots = list(zip(('headline', 'u0', 'u1', 'u2'), news, [''] * 4))
+    slots += [(f'l{i}', {}, name) for i, name in enumerate(leaders)]
+    ready, evidence, hashes = {}, {}, set()
+    with ThreadPoolExecutor(max_workers=7) as pool:
+        references = [(slot, card, person, pool.submit(media_candidates, card, person)) for slot, card, person in slots]
+        used_urls = set()
+        for slot, card, person, future in references:
+            attempted = []
+            for candidate in future.result():
+                url = candidate['url']
+                if url in used_urls or url in attempted:
+                    continue
+                attempted.append(url)
+                image = download_image(url)
+                if image and image[1] not in hashes:
+                    ready[slot] = image[0]
+                    hashes.add(image[1])
+                    used_urls.add(url)
+                    evidence[slot] = {**candidate, 'status': 'ready', 'attempts': attempted}
+                    break
+            if slot not in ready:
+                evidence[slot] = {'status': 'pending', 'candidate': person or card.get('title'),
+                                  'article': card.get('article_url') or card.get('url'),
+                                  'attempts': attempted}
+    return ready, {'downloaded': len(ready), 'selected': len(slots), 'required': 7, 'slots': evidence}
+
 
 translation_cache = {}
 translation_unavailable = False
@@ -748,7 +797,10 @@ EDITORIAL_BLOCKLIST = (
 )
 
 
-def render_png(data, news, leader_names):
+def render_png(data, assets):
+    required = {'headline', 'u0', 'u1', 'u2', 'l0', 'l1', 'l2'}
+    if set(assets) != required:
+        raise ValueError('图片待处理：' + ', '.join(sorted(required - set(assets))))
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
@@ -766,43 +818,34 @@ def render_png(data, news, leader_names):
         threading.Thread(
             target=server.serve_forever, daemon=True
         ).start()
-        page.goto(
-            f'http://127.0.0.1:{server.server_port}/index.html',
-            wait_until='load'
-        )
+        try:
+            page.goto(f'http://127.0.0.1:{server.server_port}/index.html', wait_until='load')
 
-        page.evaluate('document.fonts.ready')
-        # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
-        news_image_count = 0
-        used_image_pages = set()
-        for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-            uri, matched = fetch_news_image(row['title'], used_image_pages)
-            if uri:
-                page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
-                print('新闻配图:', key, matched)
-                news_image_count += 1
-        print('成功加载新闻相关配图:', news_image_count, '/4')
-        # 缺图不阻断出图，沿用原模板的图片占位设计。
-        # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
-        portrait_count = 0
-        for i, person in enumerate(leader_names):
-            uri = fetch_portrait(person)
-            if uri:
-                page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
-                portrait_count += 1
-        print('成功加载人物照片:', portrait_count, '/', len(leader_names))
-        # 无肖像的新闻人物使用原模板占位，不能因此中断出图。
-        page.wait_for_timeout(800)
-        error = page.locator('#errors').inner_text()
-        if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
-            raise RuntimeError('原版地球图标加载失败，停止导出')
-        if error.strip():
-            raise ValueError(error)
-        png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
-        browser.close()
-        server.shutdown()
-        server.server_close()
-        return base64.b64decode(png)
+
+            page.evaluate('document.fonts.ready')
+            filled = page.evaluate("""async (assets) => {
+                for (const [key, src] of Object.entries(assets)) {
+                    const im = new Image();
+                    im.src = src;
+                    await im.decode();
+                    images[key] = im;
+                }
+                render();
+                return Object.keys(assets).filter(key => images[key]?.naturalWidth > 0).length;
+            }""", assets)
+            if filled != len(required):
+                raise ValueError('画布未加载全部配图，停止导出')
+            if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
+                raise RuntimeError('原版地球图标加载失败，停止导出')
+            error = page.locator('#errors').inner_text()
+            if error.strip():
+                raise ValueError(error)
+            png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
+            return base64.b64decode(png)
+        finally:
+            browser.close()
+            server.shutdown()
+            server.server_close()
 
 
 EVENT_TERMS = (
@@ -897,6 +940,29 @@ def enrich(row):
     return {**row, 'description': summary} if summary else row
 
 
+def person_action_event(title, description):
+    event = title + ' ' + description
+    # A specific launch, decision, trial or named public event must accompany the attribution.
+    return bool(re.search(r'发布|推出|上线|邀请.{0,25}(?:测试|试用)|启用|公布|签署|开源|'
+                          r'(?:纳斯达克|开幕|主题演讲|发布会).{0,40}(?:承诺|宣布|重申)|'
+                          r'\b(?:released?|rolling out|trial|announced|nasdaq opening bell)\b', event, re.I))
+
+
+def classify_news(card):
+    text = card['title'] + ' ' + card.get('body', card.get('description', ''))
+    practical = re.search(r'消防|无线电|医疗配送|无人出租车|课堂|无障碍|医护|仓储|工厂|患者|wildfire|firefighter', text, re.I)
+    application = re.search(r'用于|用.{0,20}(?:转录|配送|识别|转成|通话)|转录|转写|运营|部署|辅助|协助|'
+                            r'(?:发展|探索).{0,10}(?:出租车|配送|自动驾驶)|transcrib|deliver', text, re.I)
+    if practical and application:
+        return '实际应用'
+    if re.search(r'模型权重|模型参数|论文|科研|研究基准|训练架构|芯片架构|仿真|'
+                 r'(?:大模型|语言模型|模型).{0,12}(?:开源|开放)|benchmark|model weights', text, re.I):
+        return '前沿科技'
+    if application or re.search(r'功能|工具|助手|应用|可后台|试用|体验|工作流', text):
+        return '产品应用'
+    return 'AI动态'
+
+
 def choose_people(rows, history):
     people_cards, selected, names = [], [], []
     for row in rows:
@@ -921,8 +987,10 @@ def choose_people(rows, history):
         row = enrich(row)
         if blocked(row):
             continue
-        if role in BRIEFING_ROLES and not re.search(ROLE_CONTEXT, row['title'] + row['description'], re.I):
+        profile = verified_person(name)
+        if not profile or not person_action_event(story['title'], row['description']):
             continue
+        name, role = profile['name'], profile['role']
         headline = short_headline(story['title'], 23)
         if not (is_chinese_text(story['title']) and publishable_title(story, 23)
                 and PERSON_ACTION.search(headline)):
@@ -939,6 +1007,8 @@ def choose_people(rows, history):
             'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
             'url': row['article_url'], 'discovered_via': row['discovered_via'],
             'category': 'person', 'publisher': row['source'],
+            'person': name, 'role_source': profile['role_source'],
+            'published_at_beijing': row['published_at_beijing'],
         })
         selected.append(row)
         names.append(name)
@@ -982,7 +1052,8 @@ def choose_news(rows, history, people_rows):
                 'title': headline, 'body': body,
                 'source': row['source'], 'url': row['article_url'],
                 'published_at': row['published_at'], 'discovered_via': row['discovered_via'],
-                'category': row['category'],
+                'category': row['category'], 'publisher': row['source'],
+                'published_at_beijing': row['published_at_beijing'],
             })
             selected.append(row)
             break
@@ -1086,10 +1157,17 @@ def final_problems(news_cards, people_cards):
     problems = []
     if len(news_cards) != 4 or len(people_cards) != 3:
         problems.append(f'栏目数量不足：新闻 {len(news_cards)}/4，人物 {len(people_cards)}/3')
-    for card in news_cards + people_cards:
+    for card in people_cards:
+        profile = verified_person(card.get('person', ''))
+        if (not profile or card.get('name') != profile['name'] + '｜' + profile['role']
+                or card.get('role_source') != profile['role_source']):
+            problems.append(f'科技人物身份或职务证据不足：{card.get("name", card.get("title"))}')
+    for card, hours in [(c, NEWS_HOURS) for c in news_cards] + [(c, PERSON_HOURS) for c in people_cards]:
         if not all(card.get(key) for key in ('title', 'body', 'source', 'url', 'published_at')):
             problems.append(f'缺少标题、正文或溯源字段：{card.get("title")}')
-        if not publisher_for(card['url']) or blocked(card):
+        if not in_window(card, hours):
+            problems.append(f'原文发布时间超出北京时间窗口：{card.get("title")}')
+        if not publisher_for(card.get('url', '')) or blocked(card):
             problems.append(f'来源或正文未通过检查：{card["title"]}')
     return problems
 
@@ -1143,19 +1221,30 @@ def main():
             row for row in eligible_history if in_window(row, PERSON_HOURS)
             and identify_person(row['title'] + ' ' + row['description'])[0]
         ][:40],
+        'unverified_people': [
+            {'article': row['article_url'], 'name': name}
+            for row in eligible_history if in_window(row, PERSON_HOURS)
+            and (name := identify_person(row['title'] + ' ' + row['description'])[0])
+            and not verified_person(name)
+        ][:40],
         'candidates': eligible_history[:40], 'problems': problems,
     }
     print(json.dumps({key: report[key] for key in ('date', 'unique_candidates', 'history_rejected', 'problems')},
                      ensure_ascii=False))
     print('AIHOT:', json.dumps(stats['AIHOT'], ensure_ascii=False))
+    assets, media_report = prepare_images(news_rows, names)
+    report['images'] = media_report
+    if any(slot['status'] == 'pending' for slot in media_report['slots'].values()):
+        problems.append('存在图片待处理的候选')
+    print(f'图片下载：{media_report["downloaded"]}/{media_report["selected"]}，完整早报需要 7 张')
     if not problems:
         data = {
             'issue': issue, 'date': today, 'headline': news_cards[0],
-            'updates': [dict(card, tag=tag) for tag, card in zip(['AI动态', '产品应用', '前沿科技'], news_cards[1:])],
+            'updates': [dict(card, tag=classify_news(card)) for card in news_cards[1:]],
             'leaders': people_cards,
         }
         try:
-            png = render_png(data, news_rows, names)
+            png = render_png(data, assets)
         except Exception as exc:
             problems.append(f'固定模板出图失败：{exc}')
     report['status'] = 'needs_editorial_review' if problems else 'ready'

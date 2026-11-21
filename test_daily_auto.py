@@ -62,6 +62,25 @@ class EditorialTests(unittest.TestCase):
         self.assertFalse(daily.in_window(outside, daily.PERSON_HOURS))
         self.assertTrue(daily.blocked({'title': 'Anthropic’s I.P.O. turns researchers into millionaires'}))
 
+    def test_beijing_time_normalization_and_content_classification(self):
+        row = daily.parse_aihot_item(self.raw('2026-11-21T08:00:00-02:00'))
+        self.assertEqual(row['published_at_beijing'], '2026-11-21T18:00:00+08:00')
+        self.assertFalse(daily.in_window({'published_at': '2026-11-21T10:00:00'}, daily.NEWS_HOURS))
+        self.assertEqual(daily.classify_news({'title': 'AI 帮助转录消防无线电'}), '实际应用')
+        self.assertEqual(daily.classify_news({'title': '腾讯混元公开 Hy4 模型权重'}), '前沿科技')
+        self.assertFalse(daily.person_action_event('谈人工智能的未来', '表示行业会更好。'))
+
+    def test_reject_placeholder_and_retry_alternate_image(self):
+        refs = [{'url': 'https://example.org/unavailable', 'evidence': 'https://example.org/story'},
+                {'url': 'https://example.org/related', 'evidence': 'https://example.org/story'}]
+        with (patch.object(daily, 'media_candidates', return_value=refs),
+              patch.object(daily, 'download_image', side_effect=[None, ('test-image', 'hash')])):
+            images, report = daily.prepare_images([self.raw()], [])
+        self.assertEqual(images, {'headline': 'test-image'})
+        self.assertEqual(report['slots']['headline']['attempts'], [r['url'] for r in refs])
+        with self.assertRaisesRegex(ValueError, '图片待处理'):
+            daily.render_png({}, images)
+
     def test_pollution_and_person_name(self):
         self.assertTrue(daily.blocked({'description': 'm6米乐app在线登陆官网'}))
         self.assertTrue(daily.blocked({'title': '有传言称公司推出机器人'}))
@@ -101,10 +120,15 @@ class EditorialTests(unittest.TestCase):
                 'title': 'OpenAI发布新模型', 'body': '研究团队同步公布了模型在多种任务上的评测。',
                 'source': 'OpenAI', 'url': row['article_url'], 'published_at': row['published_at'],
             }
+            profile = daily.verified_person('Robby Stein')
+            person = {**card, 'person': profile['name'], 'name': profile['name'] + '｜' + profile['role'],
+                      'role_source': profile['role_source']}
             with (patch.object(daily, 'ROOT', root), patch.object(daily, 'HISTORY', history),
                   patch.object(daily, 'collect', return_value=([row], {'AIHOT': {}})),
                   patch.object(daily, 'choose_news', return_value=([card] * 4, [row] * 4)),
-                  patch.object(daily, 'choose_people', return_value=([card] * 3, [row] * 3, ['测试人物'] * 3)),
+                  patch.object(daily, 'choose_people', return_value=([person] * 3, [row] * 3, ['Robby Stein'] * 3)),
+                  patch.object(daily, 'prepare_images',
+                               return_value=({}, {'downloaded': 7, 'selected': 7, 'required': 7, 'slots': {}})),
                   patch.object(daily, 'render_png', return_value=b'test PNG'),
                   patch.object(sys, 'argv', ['daily_auto.py', '--test'])):
                 self.assertEqual(daily.main(), 0)

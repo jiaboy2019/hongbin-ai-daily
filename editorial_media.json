@@ -1,0 +1,83 @@
+{
+  "people": [
+    {
+      "name": "Robby Stein",
+      "role": "Google 搜索产品副总裁",
+      "role_source": "https://blog.google/authors/robby-stein/",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Robby_headshot.width-400.format-webp.webp",
+          "evidence": "https://blog.google/authors/robby-stein/"
+        }
+      ]
+    },
+    {
+      "name": "Thibault Sottiaux",
+      "aliases": ["蒂博·索蒂奥", "蒂博 · 索蒂奥"],
+      "role": "OpenAI 核心产品与平台负责人",
+      "role_source": "https://vivatech.com/speakers/thibault-sottiaux-openai-3f10d8c5-445b-f111-8fcb-6045bd954326",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://storageprdv2inwink.blob.core.windows.net/e935b27a-a548-4b47-af5e-efcb250b84e1/340a208a-65ae-4069-b147-e0a98f203eb4",
+          "evidence": "https://vivatech.com/speakers/thibault-sottiaux-openai-3f10d8c5-445b-f111-8fcb-6045bd954326"
+        },
+        {
+          "url": "https://techcrunch.com/wp-content/uploads/2026/08/Thibault-headshot.jpg?w=1024",
+          "evidence": "https://techcrunch.com/2026/08/25/the-world-seems-to-be-ready-an-interview-with-openai-head-of-product-thibault-sottiaux/"
+        }
+      ]
+    },
+    {
+      "name": "Dario Amodei",
+      "aliases": ["阿莫迪"],
+      "role": "Anthropic 联合创始人兼 CEO",
+      "role_source": "https://www.anthropic.com/company/leadership",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://assets.claude.com/755f591386038c5c00102aee16ac2f9245ba5d1e.jpg?w=1920&q=75&fm=webp&fit=max",
+          "evidence": "https://www.anthropic.com/company/leadership"
+        },
+        {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Dario_Amodei_at_TechCrunch_Disrupt_2023_01_%28cropped%29.jpg/330px-Dario_Amodei_at_TechCrunch_Disrupt_2023_01_%28cropped%29.jpg",
+          "evidence": "https://commons.wikimedia.org/wiki/File:Dario_Amodei_at_TechCrunch_Disrupt_2023_01_(cropped).jpg"
+        }
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "article": "https://www.ithome.com/1/029/841.htm",
+      "images": [
+        {
+          "url": "https://raw.githubusercontent.com/Tencent-Hunyuan/Hy4/main/assets/benchmark.jpg",
+          "evidence": "https://github.com/Tencent-Hunyuan/Hy4"
+        }
+      ]
+    },
+    {
+      "article": "https://the-decoder.com/googles-gemini-can-now-run-mac-apps-and-finish-desktop-chores-in-the-background-while-you-keep-working/",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/hero_header_CU_copy.width-1300.png",
+          "evidence": "https://blog.google/innovation-and-ai/products/gemini-app/computer-use-mac/"
+        }
+      ]
+    },
+    {
+      "article": "https://www.cnet.com/tech/services-and-software/google-gemini-clears-firefighter-radio-static/",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Watch_Duty_Hero_Higher_Res.width-1300.png",
+          "evidence": "https://blog.google/company-news/outreach-and-initiatives/google-org/watch-duty-gemini-tool/"
+        },
+        {
+          "url": "https://www.cnet.com/wp-content/uploads/sites/2/Screenshot-2026-11-19-at-2.54.04-PM.png?w=864",
+          "evidence": "https://www.cnet.com/tech/services-and-software/google-gemini-clears-firefighter-radio-static/"
+        }
+      ]
+    }
+  ]
+}
