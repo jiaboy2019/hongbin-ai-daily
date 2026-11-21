@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Regression test: single-pass RSS collection and AI-focused figure selection.
+# Test expanded AI-related people including practitioners, teachers, doctors and creators.
