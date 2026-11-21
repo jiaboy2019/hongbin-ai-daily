@@ -1,0 +1,23 @@
+name: Audit international AI sources
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - news_sources.json
+      - audit_sources.py
+      - .github/workflows/audit-sources.yml
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python audit_sources.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-audit
+          path: output/source_audit.json
