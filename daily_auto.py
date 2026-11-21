@@ -74,8 +74,8 @@ def valid_description(row):
     if len(desc) < 25: return False
     source = tidy(row.get('source', ''))
     # RSS metadata sometimes repeats only the publisher name, not an article summary.
-    normalized_desc = re.sub(r'[^\\w\\u4e00-\\u9fff]', '', desc.lower())
-    normalized_source = re.sub(r'[^\\w\\u4e00-\\u9fff]', '', source.lower())
+    normalized_desc = re.sub(r'[^\w\u4e00-\u9fff]', '', desc.lower())
+    normalized_source = re.sub(r'[^\w\u4e00-\u9fff]', '', source.lower())
     if normalized_desc == normalized_source or (normalized_source and normalized_desc.startswith(normalized_source) and len(normalized_desc) < len(normalized_source) + 12): return False
     if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
     if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
