@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "阿里云，开始赚AI的钱了",
-    "body": "阿里云，开始赚AI的钱了。",
-    "source": "钛媒体"
+    "title": "谷歌推出全新搜索主页，包含人工智能聊天历史记录，且无搜索按钮",
+    "body": "谷歌推出全新搜索主页，包含人工智能聊天历史记录，且无搜索按钮。",
+    "source": "Ars Technica"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "AI算力供给承压",
-      "body": "AI算力供给承压：阿里云增速将放缓，但千亿美元营收目标不变。",
-      "source": "手机新浪网"
+      "title": "手机测试产线部署智元精灵 G2 机器人",
+      "body": "IT之家 11 月 21 日消息。",
+      "source": "IT之家"
     },
     {
       "tag": "产品应用",
-      "title": "比亚迪发布折叠方向盘",
-      "body": "比亚迪发布折叠方向盘：线控转向+具身机器人电机，10秒泊车折叠，首搭方程豹钛9。",
-      "source": "网通社"
+      "title": "欧洲云商推出55款AI新品",
+      "body": "欧洲云商推出55款AI新品，6万枚芯片容量能换来多少订单。",
+      "source": "富途牛牛"
     },
     {
       "tag": "前沿科技",
-      "title": "香港首设机器人训练中心 先模拟再职场实习",
-      "body": "香港首设机器人训练中心 先模拟再职场实习。",
-      "source": "8world"
+      "title": "美国AI公司全线暴跌",
+      "body": "美国AI公司全线暴跌。",
+      "source": "驱动之家"
     }
   ],
   "leaders": [
     {
       "name": "纳德拉｜微软CEO",
-      "title": "Outlook大崩溃后纳德拉再预警",
-      "body": "Outlook大崩溃后纳德拉再预警：AI将加剧基础设施不稳定性，催生更多宕机风险。",
-      "source": "ThePaper.cn"
+      "title": "纳德拉谈AI网络攻击隐患",
+      "body": "纳德拉谈AI网络攻击隐患：基础设施大量系统\"无法修补\"-网络与安全。",
+      "source": "至顶网"
     },
     {
-      "name": "阿莫迪｜Anthropic CEO",
-      "title": "阿莫迪：AI领路人-36氪",
-      "body": "阿莫迪：AI领路人-36氪。",
-      "source": "www.36kr.com"
+      "name": "马斯克｜xAI创始人",
+      "title": "马斯克太空计划遇阻",
+      "body": "马斯克太空计划遇阻：SpaceX 债主不允许将作为贷款抵押品的 AI 芯片发射上天。",
+      "source": "IT之家"
     },
     {
-      "name": "Sam Altman｜OpenAI CEO",
-      "title": "人工智能是否会具备意识",
-      "body": "人工智能是否会具备意识？它能变好吗？Sam Altman、Ray Kurzweil等人对奇点的看法。",
-      "source": "Fortune"
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "英伟达面临人才流失风险",
+      "body": "黄仁勋离职后，英伟达面临人才流失风险：这家芯片制造商能否留住支撑其人工智能主导地位的工程师。",
+      "source": "Livemint"
     }
   ]
 }
