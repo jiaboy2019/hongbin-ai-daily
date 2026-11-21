@@ -15,7 +15,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；阻止未经证实的人物传闻，验证人物照片和原版地球图标
+    # 使用固定母版进行完整出图验收；测试新闻相关示意配图自动填入原模板，同时验证人物照片与地球图标
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
