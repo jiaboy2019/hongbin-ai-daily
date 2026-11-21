@@ -388,6 +388,15 @@ leader_rows += [r for r in leader_direct_news if valid_description(r)]
 # 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
 leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
 # 直接以中文检索具体人物，减少英文翻译服务限流造成的遗漏。
+# 人物栏目补充实际应用者与从业者；48小时内真实媒体报道，不预设必须是科技巨头。
+leader_rows += gather([
+    'AI 教师 教学 分享', '人工智能 医生 临床 介绍',
+    'AI 设计师 创作 分享', '人工智能 工程师 研发 表示',
+    'AI 创业者 应用 发布', '机器人 研究员 介绍',
+    '大模型 产品经理 表示', 'AI 学者 研究 发现',
+    'AI 导演 影视 制作', 'AI 程序员 开发者 分享',
+    '人工智能 科研团队 教授 介绍', '智能体 创始人 访谈',
+], leader=True)
 leader_rows += gather(['奥尔特曼 人工智能 发布', '黄仁勋 人工智能 芯片', '马斯克 xAI 模型', '李飞飞 世界模型', '苏姿丰 AMD AI', '皮查伊 谷歌 Gemini', '纳德拉 微软 AI', '梁文锋 DeepSeek', '王兴兴 宇树 机器人', '阿莫迪 Anthropic', '扎克伯格 Meta AI', '杨立昆 AI', '辛顿 人工智能'], leader=True)
 # 对人物栏目增加媒体定向检索，避免通用“科技人物”搜索被无关资讯淹没。
 leader_rows += gather([
@@ -496,7 +505,7 @@ for r in sorted(leader_rows, key=score, reverse=True):
     if len(leaders) == 3: break
 # 绝不把普通科技新闻冒充人物动态；人物不足时继续拓展搜索。
 if len(leaders) < 3:
-    extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
+    extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示', 'AI 教师 表示', 'AI 医生 介绍', 'AI 工程师 研发', '人工智能 教授 指出', '机器人 创业者 分享', 'AI 设计师 应用'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
         if not name or name in leader_names or not is_chinese_text(r['title']) or not eligible_person_report(r): continue
