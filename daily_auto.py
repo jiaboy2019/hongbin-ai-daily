@@ -78,7 +78,7 @@ def gather(queries, leader=False):
 
 
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
-PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)'}
+PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing'}
 
 def fetch_wiki_thumbnail(title):
     if not title: return None
