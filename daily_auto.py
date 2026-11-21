@@ -264,7 +264,7 @@ people = [
     ('王兴兴', '宇树科技创始人'), ('彭志辉', '智元机器人联合创始人'),
     ('王鹤', '机器人研究者'), ('杨植麟', '月之暗面创始人'),
     ('闫俊杰', 'MiniMax创始人'), ('刘知远', 'AI研究者'),
-    ('李沐', 'AI研究者'), ('陈天奇', 'AI研究者'),
+    ('李沐', 'AI研究者'), ('陈天奇', 'AI研究者'), ('姚顺雨', '腾讯混元首席AI科学家'),
     ('Andrej Karpathy', 'AI研究者'), ('Demis Hassabis', 'Google DeepMind CEO'),
     ('Dario Amodei', 'Anthropic CEO'), ('Yann LeCun', 'AI科学家'),
     ('Geoffrey Hinton', 'AI科学家'), ('Jeff Dean', 'Google首席科学家'),
@@ -352,6 +352,7 @@ def valid_description(row):
     if len(desc) < 25: return False
     if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
     if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
+    if len(re.sub(r'[^A-Za-z\u4e00-\u9fff]', '', desc)) < 22: return False
     return True
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
