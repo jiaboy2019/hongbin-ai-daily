@@ -347,7 +347,7 @@ def article_body(row, limit):
     # 如翻译失败，不把英文标题重复印成正文。
     if len(re.findall('[一-鿿]', title)) < 8:
         return '原文摘要暂未完成中文转换，建议编辑核对报道后发布。'
-    return clip('据'+row['source']+'报道：'+title+'。', limit)
+    return clip(title.rstrip('。！？!?') + '。', limit)
 
 def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
