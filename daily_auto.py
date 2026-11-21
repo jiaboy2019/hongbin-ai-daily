@@ -187,9 +187,21 @@ def fetch_news_image(title, used_pages=None):
         if uri: used_pages.add(page); return uri, keyword
     return None, None
 
+def to_chinese(text):
+    if not text or len(re.findall(r'[A-Za-z]', text)) < max(12, len(text)//3): return text
+    try:
+        query = urllib.parse.urlencode({'client':'gtx','sl':'auto','tl':'zh-CN','dt':'t','q':text})
+        req = urllib.request.Request('https://translate.googleapis.com/translate_a/single?'+query,headers={'User-Agent':'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            obj = json.load(resp)
+        translated = ''.join(x[0] for x in obj[0] if x and x[0])
+        return translated if translated else text
+    except Exception as exc:
+        print('翻译不可用，保留原文:',str(exc)[:80]); return text
+
 def article_body(row, limit):
-    title = row['title'].strip()
-    desc = row.get('description', '').strip()
+    title = to_chinese(row['title'].strip())
+    desc = to_chinese(row.get('description', '').strip())
     if desc and desc.lower() not in title.lower() and title.lower() not in desc.lower():
         return clip(desc, limit)
     # RSS 未提供独立摘要时，不捏造新闻事实。以报道来源和原始标题补足信息。
@@ -226,6 +238,8 @@ people = [
 leaders, selected, leader_names = [], [], []
 leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '科技公司 CEO AI', '机器人 创始人 表示', 'AI 研究者 发布', '科技人物 人工智能']
 leader_rows = gather(leader_queries, leader=True)
+# 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
+leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
 # 把已有名单中的名字作为识别提示，同时识别新闻标题中的中文姓名和英文姓名。
 name_roles = dict(people)
 def identify_person(title):
@@ -239,16 +253,18 @@ def identify_person(title):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': article_body(r, 60), 'source': r['source']})
+    leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
-# 人物报道不够时从其他科技新闻补齐栏目，避免整个早报停产；不虚构人物。
+# 绝不把普通科技新闻冒充人物动态；人物不足时继续拓展搜索。
 if len(leaders) < 3:
-    for r in gather(['AI 人物', '人工智能 行业', '科技 最新动态'], leader=True):
-        if r['key'] in {x['key'] for x in selected}: continue
-        leaders.append({'name':'科技动态｜媒体报道', 'title':clip(r['title'],23), 'body':clip(r['title'],45), 'source':r['source']})
-        selected.append(r); leader_names.append('')
-        if len(leaders) == 3: break
+    extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
+    for r in extra:
+        name, role = identify_person(r['title'])
+        if not name or name in leader_names: continue
+        leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
+        selected.append(r); leader_names.append(name)
+        if len(leaders)==3: break
 
 used = {r['key'] for r in selected}
 news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
@@ -258,8 +274,8 @@ news.extend(r for r in international_news if r['key'] not in {n['key'] for n in 
 direct_news = direct_feed_rows()
 news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
-if len(news) < 4 or len(leaders) < 3:
-    raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
+if len(news) < 4:
+    raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4。保持原模板和新闻标准，停止出图。')
 # 新闻不再受预设配图词表限制，按媒体报道候选选取。
 news = sorted(news, key=score, reverse=True)
 # 优先兼顾国际媒体和中文媒体，并避免四条都来自同一来源。
@@ -275,9 +291,9 @@ news = chosen if len(chosen) == 4 else news[:4]
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
-    'headline': {'title': clip(news[0]['title'], 25), 'body': article_body(news[0], 88), 'source': news[0]['source']},
-    'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': article_body(r, 75), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
-    'leaders': leaders,
+    'headline': {'title': clip(to_chinese(news[0]['title']), 32), 'body': article_body(news[0], 88), 'source': news[0]['source']},
+    'updates': [{'tag': tag, 'title': clip(to_chinese(r['title']), 26), 'body': article_body(r, 75), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
+    'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
 }
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
