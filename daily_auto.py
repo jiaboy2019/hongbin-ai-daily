@@ -615,6 +615,23 @@ def is_chinese_ready(row):
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
+def quality_gate(row):
+    """Avoid weak syndicated sources and translation artifacts in published headlines."""
+    source = row.get('source', '').lower()
+    if any(x in source for x in ('风闻','财富号','金十','tempo.co','techgig','www.itsdw','中华网')):
+        return False
+    raw = row.get('title','').lower()
+    if any(x in raw for x in ('retail investor','stock','shares','trading','trade','metal','copper',
+                               'riemann','mathematical hypothesis','film trailer','movie poster',
+                               'price plunge','selloff','financial market')):
+        return False
+    chinese = to_chinese(row['title'])
+    if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想')):
+        return False
+    if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','人工智能','模型','机器人','芯片','智能体')):
+        return False
+    return True
+
 def relevant_ai_news(row):
     """普通新闻必须直接讲AI技术、AI产品或AI应用，不能仅因提到AI市场预期入选。"""
     title = row['title'].lower()
@@ -643,7 +660,7 @@ def international_primary_source(row):
 
 ready_pool = sorted(
     [r for r in news + domestic + direct_news + international_news + site_news
-     if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)
+     if quality_gate(r) and relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)
      and short_headline(r['title'], 22) not in ('人工智能领域出现新进展', 'OpenAI发布AI新进展', 'Anthropic发布AI新进展', 'Google发布AI新进展', 'Meta发布AI新进展')],
     key=lambda r: (international_primary_source(r), score(r), valid_description(r)),
     reverse=True
