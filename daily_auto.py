@@ -801,83 +801,11 @@ data = {
     'updates': [{'tag': tag, 'title': short_headline(r['title'], 22), 'body': article_body(r, 48), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
 }
-# Publication gate: do not overwrite the last good PNG with low-quality content.
-# Failed editorial checks leave a diagnostic JSON for manual review.
-problems = []
-international_count = sum(international_primary_source(r) for r in news[:4])
-if international_count < 2:
-    problems.append(f'国际主流媒体仅{international_count}/4条')
-for section, item in [('头条', data['headline'])] + [('新闻', x) for x in data['updates']]:
-    title = item['title'].strip()
-    body = item['body'].strip()
-    if not title or len(title) > (32 if section == '头条' else 22):
-        problems.append(section + '标题超长或为空')
-    if not body or re.search(r'(?:\\d{1,2}月\\d{1,2}日)?\\s*消息[。.]?
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page(viewport={'width': 1100, 'height': 1900})
-    page.add_init_script('localStorage.setItem("hongbin_v12", ' + json.dumps(json.dumps(data, ensure_ascii=False)) + ')')
-    import functools, http.server, threading
-    handler = functools.partial(
-        http.server.SimpleHTTPRequestHandler,
-        directory=str(ROOT)
-    )
-    server = http.server.ThreadingHTTPServer(
-        ('127.0.0.1', 0), handler
-    )
-    threading.Thread(
-        target=server.serve_forever, daemon=True
-    ).start()
-    page.goto(
-        f'http://127.0.0.1:{server.server_port}/index.html',
-        wait_until='load'
-    )
-
-    page.evaluate('document.fonts.ready')
-    # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
-    news_image_count = 0
-    used_image_pages = set()
-    for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-        uri, matched = fetch_news_image(row['title'], used_image_pages)
-        if uri:
-            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
-            print('新闻配图:', key, matched)
-            news_image_count += 1
-    print('成功加载新闻相关配图:', news_image_count, '/4')
-    # 缺图不阻断出图，沿用原模板的图片占位设计。
-    # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
-    portrait_count = 0
-    for i, person in enumerate(leader_names):
-        uri = fetch_portrait(person)
-        if uri:
-            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
-            portrait_count += 1
-    print('成功加载人物照片:', portrait_count, '/', len(leader_names))
-    # 无肖像的新闻人物使用原模板占位，不能因此中断出图。
-    page.wait_for_timeout(800)
-    error = page.locator('#errors').inner_text()
-    if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
-        raise RuntimeError('原版地球图标加载失败，停止导出')
-    if error.strip():
-        print('模板文字提醒:', error)
-    png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
-    (OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
-    (OUT / '洪滨每日AI早报.png').write_bytes(base64.b64decode(png))
-    browser.close()
-    server.shutdown()
-state['last_issue'] = int(issue)
-state['items'] = (state['items'] + [{'key': r['key'], 'title': r['title'], 'date': TODAY.isoformat()} for r in news + selected])[-500:]
-HISTORY.write_text(json.dumps(state, ensure_ascii=False, indent=2), 'utf-8')
-print('已生成', OUT / '洪滨每日AI早报.png')
-, body):
-        problems.append(section + '正文无有效事实')
-    if title in ('人工智能领域出现新进展','OpenAI公布AI相关动态','Anthropic公布AI相关动态'):
-        problems.append(section + '标题空泛')
-if problems:
-    (OUT / 'editorial_review.json').write_text(json.dumps({
-        'date': TODAY.isoformat(), 'status':'needs_editorial_review',
-        'problems':problems, 'candidate_poster':data
-    },ensure_ascii=False,indent=2),'utf-8')
-    raise RuntimeError('新闻编辑验收未通过：' + '；'.join(problems))
+# Refuse to publish if the selected international news quota is not met.
+intl_count = sum(international_primary_source(item) for item in news[:4])
+if intl_count < 2:
+    (OUT / 'editorial_review.json').write_text(json.dumps({'reason':'国际主流媒体不足2条','count':intl_count,'candidate':data},ensure_ascii=False,indent=2),'utf-8')
+    raise RuntimeError('编辑验收未通过：国际主流媒体新闻不足2条')
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page(viewport={'width': 1100, 'height': 1900})
