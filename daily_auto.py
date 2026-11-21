@@ -422,7 +422,31 @@ if len(leaders) != 3:
     (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
     raise RuntimeError(f'人物动态仅{len(leaders)}/3条，已输出待审候选报告，拒绝用占位新闻出图')
 if any(not valid_summary(r) for r in news + selected):
-    raise RuntimeError('部分新闻缺少独立的事实摘要，拒绝仅重复标题出图')
+    invalid = [r for r in news + selected if not valid_summary(r)]
+    report = {
+        'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
+        'reason': f'{len(invalid)}条入选内容缺少独立摘要',
+        'invalid_selected_items': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description', ''))[:250],
+             'person': identify_person(r['title'])[0]}
+            for r in invalid
+        ],
+        'selected_news': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description', ''))[:250]}
+            for r in news
+        ],
+        'selected_people': [
+            {'title': r['title'], 'source': r['source'],
+             'description': tidy(r.get('description', ''))[:250],
+             'person': identify_person(r['title'])[0]}
+            for r in selected
+        ],
+        'note': '仅用于编辑诊断；禁止将标题改写当作独立事实摘要。'
+    }
+    (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
+    raise RuntimeError(f'{len(invalid)}条入选内容缺少独立摘要，已输出待审报告，拒绝出图')
 if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
     raise RuntimeError('发现未经独立确认的模型版本号，停止出图')
 
