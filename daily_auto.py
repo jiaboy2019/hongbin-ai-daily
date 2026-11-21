@@ -620,7 +620,7 @@ def relevant_ai_news(row):
     title = row['title'].lower()
     excluded = ('锡价','铜价','铝价','关税','跨境包裹','插混','燃油','混动','显卡驱动',
                 'geforce hotfix','game ready','股价','股票','债券','基金','汇率','楼市',
-                '房地产','融资轮','估值','价格暴跌','商品期货')
+                '房地产','融资轮','估值','价格暴跌','商品期货','金属','铜','抛售','市场','黎曼','数学猜想','riemann','hypothesis','selloff','metal','copper')
     if any(word in title for word in excluded): return False
     direct_ai = ('人工智能','大模型','语言模型','世界模型','智能体','ai应用','ai工具',
                  'ai模型','ai助手','ai芯片','ai机器人','机器人','机器学习',
@@ -643,7 +643,8 @@ def international_primary_source(row):
 
 ready_pool = sorted(
     [r for r in news + domestic + direct_news + international_news + site_news
-     if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],
+     if relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)
+     and short_headline(r['title'], 22) not in ('人工智能领域出现新进展', 'OpenAI发布AI新进展', 'Anthropic发布AI新进展', 'Google发布AI新进展', 'Meta发布AI新进展')],
     key=lambda r: (international_primary_source(r), score(r), valid_description(r)),
     reverse=True
 )
