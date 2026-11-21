@@ -379,6 +379,16 @@ def short_headline(raw, limit=22):
             return actor + ('发布AI新进展' if '发布' in title or '推出' in title else '公布AI相关动态')
     return '人工智能领域出现新进展'
 
+def publishable_title(row, limit=22):
+    title = short_headline(row['title'], limit)
+    if title in ('人工智能领域出现新进展','OpenAI发布AI新进展','Anthropic发布AI新进展','Google发布AI新进展','Meta发布AI新进展','英伟达公布AI相关动态'):
+        return False
+    if any(x in title for x in ('公布AI相关动态','发布AI新进展','高考','违规考生','数学问题','数学突破','价格已在网上泄露','完美风暴','预测翻转')):
+        return False
+    if title.startswith(('在“','在「','之后','关于')) or title.endswith(('之后','之前','推出','发布','宣布','称','表示','成功','突破','将','与','的')):
+        return False
+    return len(title) >= 8
+
 def article_body(row, limit):
     title = to_chinese(row['title'].strip())
     desc = to_chinese(row.get('description', '').strip())
@@ -560,7 +570,7 @@ for r in sorted(leader_rows, key=score, reverse=True):
     if not eligible_person_report(r) or not person_specific_story(r, name): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
-    if not is_chinese_text(r['title']): continue
+    if not is_chinese_text(r['title']) or not publishable_title(r, 23): continue
     # 仅标题可核验时，以标题事实形成简讯，不冒充原文独立摘要。
     if not valid_description(r):
         r = dict(r, headline_only_person=True)
@@ -572,7 +582,7 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示', 'AI 教师 表示', 'AI 医生 介绍', 'AI 工程师 研发', '人工智能 教授 指出', '机器人 创业者 分享', 'AI 设计师 应用'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or person_key(name) in {person_key(n) for n in leader_names} or not is_chinese_text(r['title']) or not eligible_person_report(r) or not person_specific_story(r, name): continue
+        if not name or person_key(name) in {person_key(n) for n in leader_names} or not is_chinese_text(r['title']) or not eligible_person_report(r) or not person_specific_story(r, name) or not publishable_title(r, 23): continue
         if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
         if not valid_description(r):
             r = dict(r, headline_only_person=True)
@@ -681,7 +691,7 @@ def international_primary_source(row):
 
 ready_pool = sorted(
     [r for r in news + domestic + direct_news + international_news + site_news
-     if quality_gate(r) and relevant_ai_news(r) and is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)
+     if quality_gate(r) and relevant_ai_news(r) and is_chinese_ready(r) and publishable_title(r, 32) and publishable_title(r, 22) and score(r)>0 and editorial_eligible(r)
      and short_headline(r['title'], 22) not in ('人工智能领域出现新进展', 'OpenAI发布AI新进展', 'Anthropic发布AI新进展', 'Google发布AI新进展', 'Meta发布AI新进展')],
     key=lambda r: (international_primary_source(r), score(r), valid_description(r)),
     reverse=True
