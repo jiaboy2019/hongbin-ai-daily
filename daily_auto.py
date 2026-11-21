@@ -122,12 +122,12 @@ people = [
     ('Satya Nadella', '微软CEO'), ('Jensen Huang', '英伟达CEO'),
     ('Sam Altman', 'OpenAI CEO'), ('Fei-Fei Li', 'AI科学家'),
     ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
-    ('Hugging Face', '开源AI团队'),
 ]
 leaders, selected, leader_names = [], [], []
 for name, role in people:
+    if len(leaders) == 3: break
     found = [r for r in gather(['"' + name + '"', '"' + name + '" (site:x.com OR site:github.com OR site:substack.com OR site:medium.com)', '"' + name + '" (AI OR 人工智能 OR 科技)'], leader=True) if name.lower() in r['title'].lower() and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传'))]
-    if found:
+    if found and not any(name in n or n in name for n in leader_names):
         r = sorted(found, key=lambda item: (score(item), len(item['title']) <= 65), reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
         selected.append(r)
