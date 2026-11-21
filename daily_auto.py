@@ -259,8 +259,16 @@ def fetch_wiki_thumbnail(title):
         print('百科配图下载失败:', title, exc)
         return None
 
+# 中英文报道可能使用不同姓名写法；肖像只按已知对应人物匹配。
+PERSON_PORTRAIT_ALIASES = {
+    '姚顺雨': 'Yao_Shunyu', '梁文锋': 'Liang_Wenfeng',
+    'Demis Hassabis': 'Demis_Hassabis', 'Andrej Karpathy': 'Andrej_Karpathy',
+    'Jeff Dean': 'Jeff_Dean', 'François Chollet': 'François_Chollet',
+    'Dario Amodei': 'Dario_Amodei', 'Sundar Pichai': 'Sundar_Pichai',
+}
 def fetch_portrait(name):
-    return fetch_wiki_thumbnail(PERSON_PAGES.get(name))
+    page = PERSON_PAGES.get(name) or PERSON_PORTRAIT_ALIASES.get(name)
+    return fetch_wiki_thumbnail(page) if page else None
 
 # 只使用与新闻标题中明确出现的机构/产品对应的百科图片。
 # 这些是相关主体的示意配图，并非新闻现场照片；找不到时不以随机图片代替。
@@ -545,6 +553,10 @@ if len(leaders) != 3:
     }
     (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
     raise RuntimeError(f'人物动态仅{len(leaders)}/3条，已输出待审候选报告，拒绝用占位新闻出图')
+# 出图前再检查人物标签，不能把动词、抽象词当作人名。
+INVALID_PERSON_NAMES = {'预测','表示','认为','透露','宣布','发布','警告','指出','建议','回应','分析','介绍','研究','专家','团队','未来'}
+if any(p['name'].split('｜')[0] in INVALID_PERSON_NAMES for p in leaders):
+    raise RuntimeError('人物栏目识别到非人名，拒绝出图')
 if any(not valid_summary(r) for r in news + selected):
     invalid = [r for r in news + selected if not valid_summary(r)]
     report = {
