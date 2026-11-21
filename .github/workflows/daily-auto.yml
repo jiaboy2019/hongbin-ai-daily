@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Check Python syntax
+        run: python -m py_compile daily_auto.py
       - name: Install Chinese fonts
         run: |
           sudo apt-get update
@@ -61,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Verify Python syntax fix and substantive summary gate.
+# Test Python syntax first, then editorial summary and person-news checks.
