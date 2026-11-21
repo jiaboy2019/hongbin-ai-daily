@@ -461,8 +461,8 @@ def eligible_person_report(row):
     # RSS 未附独立摘要就丢弃整条真实报道。
     if not valid_description(row):
         title = row.get('title','')
-        if len(re.findall('[一-鿿]', title)) < 14: return False
-        if not any(w in title for w in ('表示','称','认为','指出','介绍','发布','推出','分享','宣布','谈','透露','展示','呼吁','建议','解释','回应','预测','完成','开发','应用','使用','开源','研究')): return False
+        if len(re.findall('[一-鿿]', title)) < 10: return False
+        if not any(w in title for w in ('表示','称','认为','指出','介绍','发布','推出','分享','聊','访谈','宣布','谈','透露','展示','呼吁','建议','解释','回应','预测','完成','开发','应用','使用','开源','研究')): return False
     if score(row) == -100: return False
     if not relevant_ai_person_event(row['title'] + ' ' + row.get('description','')): return False
     return True
@@ -630,7 +630,7 @@ def valid_summary(row):
     return bool(row.get('headline_only_person')
                 and identify_person(row['title'])[0]
                 and eligible_person_report(row)
-                and len(re.findall('[一-鿿]', row['title'])) >= 14)
+                and len(re.findall('[一-鿿]', row['title'])) >= 10)
 
 if len(leaders) != 3:
     # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
