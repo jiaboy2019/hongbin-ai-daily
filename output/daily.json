@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "Anysphere 考虑让 Cursor 停用中…",
-    "body": "Anysphere 考虑让 Cursor 停用中国开源权重模型",
-    "source": "Unite.AI"
+    "title": "Genesys launches standal…",
+    "body": "据Outsource Accelerator报道：Genesys launches standalone AI agents and effort-based pricing。",
+    "source": "Outsource Accelerator"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "50天推出4款模型，谷歌想当「造物主」了？",
-      "body": "50天推出4款模型，谷歌想当「造物主」了？",
-      "source": "投资界"
+      "title": "苹果悄然布局AI Agent，Meta …",
+      "body": "据华尔街见闻报道：苹果悄然布局AI Agent，Meta Muse迎来新对手。",
+      "source": "华尔街见闻"
     },
     {
       "tag": "产品应用",
-      "title": "从科研仿真到模型训练，盘点联想集团等国内…",
-      "body": "从科研仿真到模型训练，盘点联想集团等国内AI服务器头部厂商",
-      "source": "手机新浪网"
+      "title": "TestSprite 4.0 Launc…",
+      "body": "据ACCESS Newswire报道：TestSprite 4.0 Launches Independent AI Testing Agent。",
+      "source": "ACCESS Newswire"
     },
     {
       "tag": "前沿科技",
-      "title": "山东6个农业机器人应用场景入选全国典型",
-      "body": "山东6个农业机器人应用场景入选全国典型",
+      "title": "南京大学团队研发AI多智能体协同系统 瞄…",
+      "body": "据Sohu报道：南京大学团队研发AI多智能体协同系统 瞄准港股破发预警。",
       "source": "Sohu"
     }
   ],
   "leaders": [
     {
       "name": "黄仁勋｜英伟达CEO",
-      "title": "英伟达暴跌美股科技迎来AI金融风暴，亚洲的周…",
-      "body": "英伟达暴跌美股科技迎来AI金融风暴，亚洲的周末人心惶惶！黄仁勋卸下 CEO 就如乔峰交出…",
-      "source": "Sohu"
+      "title": "重磅！黄仁勋正式辞任英伟达CEO、女CFO紧…",
+      "body": "据FX168财经报道：重磅！黄仁勋正式辞任英伟达CEO、女CFO紧急接班！2万亿美元市值蒸发，AI帝国将何去何从？。",
+      "source": "FX168财经"
     },
     {
       "name": "科技动态｜媒体报道",
-      "title": "几十元起步！来马栏山“拍”一部AI漫剧",
-      "body": "几十元起步！来马栏山“拍”一部AI漫剧",
-      "source": "Sohu"
+      "title": "活动报名｜量子位「MEET2027智能未来大…",
+      "body": "活动报名｜量子位「MEET2027智能未来大会」重磅嘉宾阵容公布！",
+      "source": "智源社区"
     },
     {
       "name": "科技动态｜媒体报道",
-      "title": "AI短剧《丑狐》爆火，创作者分享人物形象创作…",
-      "body": "AI短剧《丑狐》爆火，创作者分享人物形象创作，“丑狐”显得很奇怪是因为拉长了面部",
-      "source": "凤凰网"
+      "title": "硅谷争议人物达里奥探索AI伦理与发展方向",
+      "body": "硅谷争议人物达里奥探索AI伦理与发展方向",
+      "source": "VanPeople"
     }
   ]
 }
