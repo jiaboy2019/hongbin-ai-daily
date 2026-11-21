@@ -118,6 +118,9 @@ NEWS_IMAGE_PAGES = [
     ('阿里', 'Alibaba_Group'), ('腾讯', 'Tencent'),
     ('小米', 'Xiaomi'), ('DeepSeek', 'DeepSeek'),
     ('宇树', 'Unitree_Robotics'), ('Anthropic', 'Anthropic'),
+    ('机器人', 'Robot'), ('人工智能', 'Artificial_intelligence'),
+    ('大模型', 'Large_language_model'), ('智能体', 'Intelligent_agent'),
+    ('芯片', 'Integrated_circuit'), ('AI', 'Artificial_intelligence'),
 ]
 def fetch_news_image(title):
     for keyword, page in NEWS_IMAGE_PAGES:
