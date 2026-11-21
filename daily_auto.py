@@ -188,7 +188,6 @@ data = {
     'updates': [{'tag': tag, 'title': clip(r['title'], 21), 'body': clip(r['title'], 53), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders,
 }
-(OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page(viewport={'width': 1100, 'height': 1900})
@@ -238,6 +237,7 @@ with sync_playwright() as p:
     if error.strip():
         raise RuntimeError('模板文字溢出：' + error)
     png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
+    (OUT / 'daily.json').write_text(json.dumps(data, ensure_ascii=False, indent=2), 'utf-8')
     (OUT / '洪滨每日AI早报.png').write_bytes(base64.b64decode(png))
     browser.close()
     server.shutdown()
