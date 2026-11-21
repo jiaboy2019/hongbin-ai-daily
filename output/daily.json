@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "人择研究人员声称与克劳德一起解决了黎曼问题",
-    "body": "人择研究人员声称与克劳德一起解决了黎曼问题。",
+    "title": "人工智能抛售对金属市场造成严重破坏，铜价暴跌加剧",
+    "body": "人工智能抛售对金属市场造成严重破坏，铜价暴跌加剧。",
     "source": "Bloomberg.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "随着科技股暴跌，人类股票下跌",
-      "body": "随着科技股暴跌，人类股票下跌。",
+      "title": "人类工作人员声称数学黎曼假设的解决方案",
+      "body": "人类工作人员声称数学黎曼假设的解决方案。",
       "source": "Financial Times"
     },
     {
       "tag": "产品应用",
-      "title": "OpenAI 为 Plus 用户带来协作 Space 中心",
-      "body": "OpenAI 为 Plus 用户带来协作 Space 中心。",
-      "source": "Engadget AI"
+      "title": "OpenAI发布AI新进展",
+      "body": "发布“地球最强”模型仅几天后 OpenAI首席科学家发长文呼吁放慢AI开发。",
+      "source": "财联社"
     },
     {
       "tag": "前沿科技",
-      "title": "人工智能中最容易被误解的图表刚刚进行了重大更新",
-      "body": "人工智能评估非营利组织 METR 的一份新报告发现，一些人工智能能力正在沿着指数轨迹持续改进，…",
-      "source": "MIT Technology Review"
+      "title": "Meta发布最强AI模型",
+      "body": "Meta发布最强AI模型：编程直追OpenAI。",
+      "source": "金十数据"
     }
   ],
   "leaders": [
     {
-      "name": "黄仁勋｜英伟达CEO",
-      "title": "黄仁勋被拒回归后",
-      "body": "黄仁勋被拒回归后！微软高管：英伟达风波将促使客户考虑采用其他公司AI芯片。",
-      "source": "驱动之家"
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "Nvidia 可以在没有黄仁勋的情况下运行",
+      "body": "Nvidia 可以在没有黄仁勋的情况下运行。 AI能否蓬勃发展。",
+      "source": "Fortune"
     },
     {
-      "name": "阿莫迪｜Anthropic CEO",
-      "title": "阿莫迪看好AI加速医学突破 预期人类寿命延长至150岁",
-      "body": "阿莫迪看好AI加速医学突破 预期人类寿命延长至150岁。",
-      "source": "China Press"
+      "name": "Dario Amodei｜Anthropic CEO",
+      "title": "Anthropic公布AI相关动态",
+      "body": "Anthropic 首席执行官 Dario Amodei 谈人工智能模型的节奏。",
+      "source": "CNBC"
     },
     {
-      "name": "吴泳铭｜阿里巴巴CEO",
-      "title": "平头哥三代 GPU 加速推进",
-      "body": "吴泳铭：平头哥三代 GPU 加速推进，正成为阿里全栈 AI 的支撑底座。",
-      "source": "IT之家"
+      "name": "Satya Nadella｜微软CEO",
+      "title": "微软首席执行官萨蒂亚纳德拉",
+      "body": "微软首席执行官萨蒂亚纳德拉：人工智能将改变员工角色。",
+      "source": "TechGig"
     }
   ]
 }
