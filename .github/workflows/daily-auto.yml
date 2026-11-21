@@ -15,7 +15,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；修复人物动态归属核验，过滤无来源的社交媒体评论后复测
+    # 使用固定母版进行完整出图验收；阻止未经证实的离职传闻和无关政治新闻进入人物栏目
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
