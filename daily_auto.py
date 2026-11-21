@@ -710,7 +710,7 @@ issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
     'headline': {'title': clip(to_chinese(news[0]['title']), 32), 'body': article_body(news[0], 88), 'source': news[0]['source']},
-    'updates': [{'tag': tag, 'title': clip(to_chinese(r['title']), 26), 'body': article_body(r, 75), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
+    'updates': [{'tag': tag, 'title': clip(to_chinese(r['title']), 22), 'body': article_body(r, 48), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
 }
 with sync_playwright() as p:
