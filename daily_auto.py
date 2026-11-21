@@ -117,7 +117,7 @@ def search(q, leader=False, international=False):
     return rows
 
 def article_meta_summary(url):
-    # Fetch publisher page only; reject Google News redirects and untrusted URL schemes.
+    # Extract a publisher's own metadata, never fabricate an article summary.
     if not url or not url.startswith(('https://','http://')): return ''
     host = urllib.parse.urlparse(url).hostname or ''
     if host.endswith(('google.com','google.cn','googleusercontent.com')): return ''
@@ -125,12 +125,9 @@ def article_meta_summary(url):
         req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
         with urllib.request.urlopen(req, timeout=5) as resp:
             page = resp.read(350_000).decode('utf-8', 'ignore')
-        for pattern in (
-            r'<meta\\s+[^>]*property=["\\x27]og:description["\\x27][^>]*content=["\\x27]([^"\\x27]+)',
-            r'<meta\\s+[^>]*name=["\\x27]description["\\x27][^>]*content=["\\x27]([^"\\x27]+)',
-            r'<meta\\s+[^>]*content=["\\x27]([^"\\x27]+)["\\x27][^>]*(?:property=["\\x27]og:description|name=["\\x27]description)',
-        ):
-            m = re.search(pattern, page, re.I)
+        for tag in re.findall(r'<meta\\b[^>]*>', page, re.I):
+            if not re.search(r'(?:og:description|name=["\\x27]description)', tag, re.I): continue
+            m = re.search(r'content=["\\x27](.*?)["\\x27]', tag, re.I | re.S)
             if m:
                 result = tidy(m.group(1))[:450]
                 if len(result) >= 30: return result
