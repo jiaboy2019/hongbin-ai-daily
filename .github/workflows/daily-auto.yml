@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test international-source Chinese search and remove dated newswire boilerplate.
+# Rerun after fixing Python regex string syntax.
