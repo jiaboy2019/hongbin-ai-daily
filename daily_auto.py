@@ -500,7 +500,6 @@ def eligible_person_report(row):
     # 保留明确的高风险标题排除及AI相关性，避免虚构、广告和无关新闻。
     if not editorial_eligible(row): return False
     # The person must be central to a concrete AI event, not finance, entertainment or a roundup.
-    if not quality_gate(row): return False
     low = row['title'].lower()
     if any(x in low for x in ('crypto','xrp','ada ','bitcoin','token','poster','movie','film','marketing','trump','donat','acquisition','buyout','60,000','60000','丑闻','收购','海报','电影','捐款','加密货币','预测翻转')):
         return False
