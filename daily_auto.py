@@ -283,19 +283,34 @@ translation_unavailable = False
 def to_chinese(text):
     global translation_unavailable
     if text in translation_cache: return translation_cache[text]
-    if translation_unavailable: return text
     if not text or len(re.findall(r'[A-Za-z]', text)) < max(12, len(text)//3): return text
+    # Primary translator; if rate-limited, try a second independent provider.
+    if not translation_unavailable:
+        try:
+            query = urllib.parse.urlencode({'client':'gtx','sl':'auto','tl':'zh-CN','dt':'t','q':text})
+            req = urllib.request.Request('https://translate.googleapis.com/translate_a/single?'+query,headers={'User-Agent':'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                obj = json.load(resp)
+            translated = ''.join(x[0] for x in obj[0] if x and x[0])
+            if translated:
+                translation_cache[text] = translated
+                return translated
+        except Exception as exc:
+            if '429' in str(exc): translation_unavailable = True
+            print('主翻译源不可用:',str(exc)[:80])
     try:
-        query = urllib.parse.urlencode({'client':'gtx','sl':'auto','tl':'zh-CN','dt':'t','q':text})
-        req = urllib.request.Request('https://translate.googleapis.com/translate_a/single?'+query,headers={'User-Agent':'Mozilla/5.0'})
+        # Fallback is only for translation, not for inventing missing article facts.
+        query = urllib.parse.urlencode({'q':text[:480], 'langpair':'en|zh-CN'})
+        req = urllib.request.Request('https://api.mymemory.translated.net/get?'+query, headers={'User-Agent':'HongbinDaily/1.0'})
         with urllib.request.urlopen(req, timeout=8) as resp:
             obj = json.load(resp)
-        translated = ''.join(x[0] for x in obj[0] if x and x[0])
-        translation_cache[text] = translated if translated else text
-        return translation_cache[text]
+        translated = html.unescape(obj.get('responseData',{}).get('translatedText',''))
+        if obj.get('responseStatus') == 200 and len(re.findall('[一-鿿]',translated)) >= 5:
+            translation_cache[text] = translated
+            return translated
     except Exception as exc:
-        if '429' in str(exc): translation_unavailable = True
-        print('翻译不可用，保留原文:',str(exc)[:80]); return text
+        print('备用翻译源不可用:',str(exc)[:80])
+    return text
 
 def article_body(row, limit):
     title = to_chinese(row['title'].strip())
