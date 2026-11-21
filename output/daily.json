@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "谷歌为 Gemini 上线 GIF 动态图片生成功能，由 Om…",
-    "body": "IT之家 11 月 21 日消息，谷歌宣布为 Gemini 上线 GIF 生成功能，相应功能由视频模型 Gemini Omni 1.2 Flash 驱动，可生成循环动态图效和…",
+    "title": "12 张二手英伟达 V100：律师自建 AI 集群跑 Deep…",
+    "body": "IT之家 11 月 21 日消息，律师 u/TumbleweedNew6515 昨日（11 月 20 日）在 Reddit 社区发帖，斥资 9,450 美元（IT之家注：现汇…",
     "source": "IT之家"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "面对人工智能数据中心创纪录的排放量，Meta重新考…",
-      "body": "据Ars Technica报道：面对人工智能数据中心创纪录的排放量，Meta重新考虑2030年净零排放目标。",
-      "source": "Ars Technica"
+      "title": "刚刚，DeepSeek V1作者创业项目曝光：开源…",
+      "body": "据量子位报道：刚刚，DeepSeek V1作者创业项目曝光：开源Agent。",
+      "source": "量子位"
     },
     {
       "tag": "产品应用",
-      "title": "OpenAI 让攻击者更难弄清其最新人工智能模型的…",
-      "body": "据The Decoder报道：OpenAI 让攻击者更难弄清其最新人工智能模型的思考方式。",
-      "source": "The Decoder"
+      "title": "华为云开源昇腾原生具身世界模型CloudRobo-…",
+      "body": "据InfoQ报道：华为云开源昇腾原生具身世界模型CloudRobo-WM1.2，两项评测均列第一。",
+      "source": "InfoQ"
     },
     {
       "tag": "前沿科技",
-      "title": "达里奥 2010 年曾拒绝马斯克招揽，2016 年…",
-      "body": "IT之家 11 月 21 日消息，据《华尔街日报》今日报道，Anthropic CEO 达里奥 · 阿莫代伊（Dario Amodei）早在 201…",
-      "source": "IT之家"
+      "title": "微软发布 7 款“世界级”新模型，全在打同一个算盘…",
+      "body": "据OSCHINA报道：微软发布 7 款“世界级”新模型，全在打同一个算盘 - OSCHINA - 开源 × AI · 开发者生态社区。",
+      "source": "OSCHINA"
     }
   ],
   "leaders": [
     {
-      "name": "姚顺雨｜腾讯混元首席AI科学家",
-      "title": "腾讯姚顺雨重返清华姚班：聊大模型不靠“赛马”…",
-      "body": "据36氪报道：腾讯姚顺雨重返清华姚班：聊大模型不靠“赛马”拼指标，RSI要落到具体工程。",
-      "source": "36氪"
-    },
-    {
-      "name": "Jeff Dean｜Google首席科学家",
-      "title": "珍贵访谈：Jeff Dean谈AI的下一次范…",
-      "body": "据36氪报道：珍贵访谈：Jeff Dean谈AI的下一次范式升级。",
-      "source": "36氪"
+      "name": "吴泳铭｜阿里巴巴CEO",
+      "title": "阿里巴巴CEO 吴泳铭：千问已在平头哥芯片训…",
+      "body": "据IT之家报道：阿里巴巴CEO 吴泳铭：千问已在平头哥芯片训练下一代模型，百炼基于国产芯片提供模型推理服务。",
+      "source": "IT之家"
     },
     {
       "name": "黄仁勋｜英伟达CEO",
-      "title": "VOA今日焦点 (2026年11月20日) …",
-      "body": "据美国之音报道：VOA今日焦点 (2026年11月20日) “特习会”谈及黄仁勋事件 同意为超级智能加装“护栏” | …",
-      "source": "美国之音"
+      "title": "没有黄仁勋的英伟达，还能守住芯片霸主地位吗？",
+      "body": "据第一财经报道：没有黄仁勋的英伟达，还能守住芯片霸主地位吗？。",
+      "source": "第一财经"
+    },
+    {
+      "name": "王兴兴｜宇树科技创始人",
+      "title": "王兴兴：机器人泛化能力将迎突破 技术临界点已现",
+      "body": "据中华网报道：王兴兴：机器人泛化能力将迎突破 技术临界点已现。",
+      "source": "中华网"
     }
   ]
 }
