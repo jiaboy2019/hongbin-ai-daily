@@ -21,11 +21,21 @@ SAME_DAY = TODAY.isoformat() in last_dates[-7:]
 # 仅调整新闻筛选；原网页模板、图标、画布与栏目布局均保持不变。
 EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词', '培训', '培训机构', '横向测评', '辞职', '利润翻倍', '亏超', '新媒体创作', '课程体系', '技能培训班', '抵押的AI芯片')
 SIGNALS = ('发布', '推出', '上线', '开源', '突破', '模型', '机器人', '芯片', '智能体', 'Agent', '研发', '科研', '应用', '功能', '升级', '世界模型', '编程', '自动化', 'AI', 'artificial intelligence', 'robot', 'chip', 'research', 'launch', 'model', 'agent', 'breakthrough')
+TRUSTED_SOURCES = ('Reuters','Associated Press','AP News','Bloomberg','Financial Times','新华','人民网','中新网','TechCrunch','The Verge','MIT Technology Review','Ars Technica','IEEE Spectrum','机器之心','量子位','智东西','36氪','钛媒体','Hugging Face','OpenAI','Google DeepMind','Anthropic','NVIDIA','Microsoft','Nature','Science','The Decoder','MIT News')
+MAJOR_SIGNALS = ('重大突破','首次','全球首','新一代','发布','推出','开源','模型','芯片','机器人','科研','突破','智能体','Agent','大模型','AI','artificial intelligence','robot','chip','research','launch','model','agent','breakthrough')
+LOW_VALUE = ('昨夜今晨','早报汇总','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手')
 def score(row):
-    title = row['title']
-    if any(w in title for w in EXCLUDE): return -100
-    matches = sum(3 for w in SIGNALS if w.lower() in title.lower())
-    return matches + (1 if len(title) <= 45 else 0) if matches else -20
+    title, source = row['title'], row.get('source','')
+    low = title.lower()
+    if any(w.lower() in low for w in EXCLUDE + LOW_VALUE): return -100
+    if len(title) > 100: return -30
+    points = sum(2 for w in MAJOR_SIGNALS if w.lower() in low)
+    if not points: return -20
+    if any(w.lower() in source.lower() for w in TRUSTED_SOURCES): points += 16
+    if any(w in low for w in ('重大突破','全球首','首次','开源','突破','发布')): points += 5
+    if any(w.lower() in low for w in ('openai','google','deepmind','anthropic','nvidia','英伟达','谷歌','微软','苹果','deepseek','机器人')): points += 5
+    if len(title)>68: points -= 5
+    return points
 
 def similar(a, b):
     # 使用字符三元组发现换标题的近似重复事件；并非完整语义去重。
@@ -262,6 +272,7 @@ def is_chinese_text(t):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
+    if score(r)<5: continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t')): continue
     if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
     if not is_chinese_text(r['title']): continue
@@ -307,7 +318,7 @@ def is_chinese_ready(row):
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
-ready_pool = [r for r in news + sorted(domestic + direct_news + international_news, key=score, reverse=True) if is_chinese_ready(r)]
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0],key=score,reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
