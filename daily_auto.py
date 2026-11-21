@@ -22,20 +22,23 @@ SAME_DAY = TODAY.isoformat() in last_dates[-7:]
 EXCLUDE = ('股票', '股价', '炒股', '基金', '投资建议', '科普周', '洽谈会', '峰会', '大会召开', '奖励大会', '书讯', '据称', '传闻', '网传', '出事了', '震惊', '重磅来袭', '十大热词', '培训', '培训机构', '横向测评', '辞职', '利润翻倍', '亏超', '新媒体创作', '课程体系', '技能培训班', '抵押的AI芯片')
 SIGNALS = ('发布', '推出', '上线', '开源', '突破', '模型', '机器人', '芯片', '智能体', 'Agent', '研发', '科研', '应用', '功能', '升级', '世界模型', '编程', '自动化', 'AI', 'artificial intelligence', 'robot', 'chip', 'research', 'launch', 'model', 'agent', 'breakthrough')
 TRUSTED_SOURCES = ('Reuters','Associated Press','AP News','Bloomberg','Financial Times','新华','人民网','中新网','TechCrunch','The Verge','MIT Technology Review','Ars Technica','IEEE Spectrum','机器之心','量子位','智东西','36氪','钛媒体','Hugging Face','OpenAI','Google DeepMind','Anthropic','NVIDIA','Microsoft','Nature','Science','The Decoder','MIT News')
-MAJOR_SIGNALS = ('重大突破','首次','全球首','新一代','发布','推出','开源','模型','芯片','机器人','科研','突破','智能体','Agent','大模型','AI','artificial intelligence','robot','chip','research','launch','model','agent','breakthrough')
-LOW_VALUE = ('昨夜今晨','早报汇总','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手')
+MAJOR_ACTORS = ('openai','anthropic','deepmind','google','microsoft','nvidia','meta','apple','deepseek','xai','mistral','hugging face','英伟达','谷歌','微软','苹果','阿里','腾讯','华为','字节','百度','宇树','智元')
+SUBSTANTIVE = ('重大突破','首次','全球首','新一代','发布','推出','开源','突破','训练','上线','收购','部署','商用','launch','released','unveils','announces','breakthrough','open-source','deploy','introduces','rolls out')
+LOW_VALUE = ('昨夜今晨','早报汇总','科技早报','一文看懂','盘点','微电影','签名','保黄','三种可能','股市','美股','体育','沙巴官网','博彩','竞猜','运动助手','心理困扰','关联机制','中介作用','调节效应','三年行动方案','五张清单','地方出台','研讨会','论坛','或将','传闻','rumor','rumour')
 def score(row):
     title, source = row['title'], row.get('source','')
     low = title.lower()
     if any(w.lower() in low for w in EXCLUDE + LOW_VALUE): return -100
     if len(title) > 100: return -30
-    points = sum(2 for w in MAJOR_SIGNALS if w.lower() in low)
-    if not points: return -20
-    if any(w.lower() in source.lower() for w in TRUSTED_SOURCES): points += 16
-    if any(w in low for w in ('重大突破','全球首','首次','开源','突破','发布')): points += 5
-    if any(w.lower() in low for w in ('openai','google','deepmind','anthropic','nvidia','英伟达','谷歌','微软','苹果','deepseek','机器人')): points += 5
-    if len(title)>68: points -= 5
-    return points
+    points = 0
+    if any(w.lower() in low for w in ('ai','人工智能','大模型','机器人','芯片','智能体','agent','模型','robot','chip','llm')): points += 5
+    if any(w.lower() in source.lower() for w in TRUSTED_SOURCES): points += 9
+    if any(w in low for w in MAJOR_ACTORS): points += 12
+    if any(w in low for w in SUBSTANTIVE): points += 12
+    if any(w in low for w in ('科研突破','重大突破','全球首','新一代','新模型','开源模型','机器人量产','world model','世界模型')): points += 7
+    if any(w in low for w in ('金融','股价','股票','融资','财报','贷款','证券','期货')): points -= 10
+    if len(title)>65: points -= 8
+    return points if points >= 8 else -20
 
 def similar(a, b):
     # 使用字符三元组发现换标题的近似重复事件；并非完整语义去重。
@@ -272,8 +275,8 @@ def is_chinese_text(t):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    if score(r)<5: continue
-    if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t')): continue
+    if score(r)<8: continue
+    if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
     if not is_chinese_text(r['title']): continue
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
