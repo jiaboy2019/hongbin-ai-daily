@@ -87,7 +87,7 @@ def norm(s):
     return hashlib.sha256(re.sub(r'[^\w\u4e00-\u9fff]', '', s.lower()).encode()).hexdigest()[:20]
 
 def search(q, leader=False, international=False):
-    params = urllib.parse.urlencode({'q': q + ' when:1d', 'hl':'en-US' if international else 'zh-CN','gl':'US' if international else 'CN','ceid':'US:en' if international else 'CN:zh-Hans'})
+    params = urllib.parse.urlencode({'q': q + (' when:2d' if leader else ' when:1d'), 'hl':'en-US' if international else 'zh-CN','gl':'US' if international else 'CN','ceid':'US:en' if international else 'CN:zh-Hans'})
     req = urllib.request.Request('https://news.google.com/rss/search?' + params, headers={'User-Agent':'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=25) as f:
         root = ET.fromstring(f.read())
@@ -101,7 +101,7 @@ def search(q, leader=False, international=False):
         try:
             published = parsedate_to_datetime(x.findtext('pubDate', '')).astimezone(ZoneInfo('Asia/Shanghai'))
             age = (dt.datetime.now(ZoneInfo('Asia/Shanghai')) - published).total_seconds()
-            if not (0 <= age <= 18 * 3600): continue
+            if not (0 <= age <= (48 if leader else 18) * 3600): continue
         except (ValueError, TypeError, AttributeError):
             continue
         description = tidy(x.findtext('description', ''))
@@ -146,7 +146,7 @@ DIRECT_FEEDS = [
  ('机器之心','https://www.jiqizhixin.com/rss'),
  ('36氪','https://36kr.com/feed'),
 ]
-def direct_feed_rows():
+def direct_feed_rows(max_age_hours=18):
     result = []
     ns = {'atom':'http://www.w3.org/2005/Atom'}
     for source, url in DIRECT_FEEDS:
@@ -163,7 +163,7 @@ def direct_feed_rows():
                     when = parsedate_to_datetime(date_str) if not date_str.endswith('Z') else dt.datetime.fromisoformat(date_str.replace('Z','+00:00'))
                     if when.tzinfo is None: when = when.replace(tzinfo=dt.timezone.utc)
                     age = (dt.datetime.now(dt.timezone.utc)-when.astimezone(dt.timezone.utc)).total_seconds()
-                    if not 0 <= age <= 18*3600: continue
+                    if not 0 <= age <= max_age_hours*3600: continue
                 except Exception: continue
                 description = tidy(item.findtext('description') or item.findtext('{http://purl.org/rss/1.0/modules/content/}encoded') or item.findtext('atom:summary', default='', namespaces=ns) or item.findtext('atom:content', default='', namespaces=ns))
                 # 直接媒体源提供的独立摘要优先；仅删除标题重复前缀，不丢弃整段正文。
@@ -291,10 +291,11 @@ people = [
 # 开放式人物候选：从新闻报道本身识别人名；上面的名单仅作补充，不是准入限制。
 leaders, selected, leader_names = [], [], []
 leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '科技公司 CEO AI', '机器人 创始人 表示', 'AI 研究者 发布', '科技人物 人工智能']
-direct_news = direct_feed_rows()
+direct_news = direct_feed_rows(max_age_hours=18)
+leader_direct_news = direct_feed_rows(max_age_hours=48)
 leader_rows = gather(leader_queries, leader=True)
 # 直接媒体 RSS 自带事实摘要，优先补充其中真正涉及具体人物的报道。
-leader_rows += [r for r in direct_news if valid_description(r)]
+leader_rows += [r for r in leader_direct_news if valid_description(r)]
 # 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
 leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
 # 直接以中文检索具体人物，减少英文翻译服务限流造成的遗漏。
