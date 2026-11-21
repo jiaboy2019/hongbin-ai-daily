@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "伊春推出“AI+森林文旅”智慧应用 覆盖A级景区和重点经营主体",
-    "body": "伊春推出“AI+森林文旅”智慧应用 覆盖A级景区和重点经营主体。",
-    "source": "人民网黑龙江频道"
+    "title": "黄光裕的哥哥，已经在商用机器人上赚了40倍",
+    "body": "黄光裕的哥哥，已经在商用机器人上赚了40倍。",
+    "source": "36氪"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "国产大模型引领全球开源生态",
-      "body": "国产大模型引领全球开源生态（大数据观察·智能经济新形态）。",
-      "source": "人民网"
+      "title": "穆拉蒂开源“循环脑”模型",
+      "body": "27B！穆拉蒂开源“循环脑”模型：笔记本跑Agent起飞。",
+      "source": "智东西"
     },
     {
       "tag": "产品应用",
-      "title": "蔚来官宣 NWM 3.0 世界模型",
+      "title": "美参议员痛批苹果、谷歌",
       "body": "IT之家 11 月 21 日消息。",
       "source": "IT之家"
     },
     {
       "tag": "前沿科技",
-      "title": "昇腾算力训出了双榜SOTA的具身世界模型",
-      "body": "昇腾算力训出了双榜SOTA的具身世界模型，华为云这次想把整套底座开放出来。",
-      "source": "智源社区"
+      "title": "在AI帮助下已解决数学界最著名难题",
+      "body": "Anthropic数学家宣称：在AI帮助下已解决数学界最著名难题。",
+      "source": "ThePaper.cn"
     }
   ],
   "leaders": [
     {
+      "name": "Satya Nadella｜微软CEO",
+      "title": "萨蒂亚·纳德拉希望微软员工成为人工智能经理",
+      "body": "萨蒂亚·纳德拉希望微软员工成为人工智能经理，而不是传统的员工。",
+      "source": "www.techtimes.co.uk"
+    },
+    {
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "加州总检察长就黄仁勋的丑闻传唤英伟达",
+      "body": "加州总检察长就黄仁勋的丑闻传唤英伟达，以调查AI芯片是否受到损害。",
+      "source": "San Francisco Chronicle"
+    },
+    {
       "name": "Dario Amodei｜Anthropic CEO",
-      "title": "Dario Amodei是谁",
-      "body": "Dario Amodei是谁？Anthropic首席执行官的人工智能安全之旅。",
-      "source": "BusinessLine"
-    },
-    {
-      "name": "梁文锋｜DeepSeek创始人",
-      "title": "梁文锋股权被稀释",
-      "body": "梁文锋股权被稀释！深度求索工商变更落地，DeepSeek前五大股东曝光。",
-      "source": "中华网"
-    },
-    {
-      "name": "Sam Altman｜OpenAI CEO",
-      "title": "人工智能的未来已然到来",
-      "body": "人工智能的未来已然到来：Bilal Bin Saqib与OpenAI首席执行官Sam Altman的对话。",
-      "source": "TechJuice"
+      "title": "Anthropic公布AI相关动态",
+      "body": "Anthropic首席执行官Dario Amodei在纳斯达克演讲中再次承诺将推动人工智能的发展。",
+      "source": "CNBC"
     }
   ]
 }
