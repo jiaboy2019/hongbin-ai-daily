@@ -129,10 +129,20 @@ people = [
     ('Sam Altman', 'OpenAI CEO'), ('Fei-Fei Li', 'AI科学家'),
     ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
 ]
+# 人物动态必须有可归属的科技信息；媒体标题仅提到姓名不足以入选。
+LEADER_BLOCK = ('离职', '离任', '辞任', '辞职', '去世', '逝世', '遇刺', '被捕', '间谍', '战争', '导弹', '政治通牒', '爆料', '首谈', '传闻', '谣言', '阴谋', '曝', '被曝', '震惊', '特朗普', '股价', '股市', '投资机会', '官司', '起诉')
+LEADER_TECH = ('人工智能', 'AI', '模型', '机器人', '芯片', '科研', '研究', '论文', '技术', '智能体', '算法', '开源', '发布', '产品', '编程', '算力', '计算', '自动驾驶', '世界模型', '具身智能', 'agent')
+LEADER_BAD_SOURCES = ('禁闻', '搜狐', 'sohu', '驱动之家', 'x', 'twitter', '东方财富', '股吧', '自媒体')
+def leader_valid(row):
+    title = row['title']; source = row['source'].lower()
+    return (not any(w in title for w in LEADER_BLOCK)
+            and any(w.lower() in title.lower() for w in LEADER_TECH)
+            and not any(w.lower() in source for w in LEADER_BAD_SOURCES))
+
 leaders, selected, leader_names = [], [], []
 for name, role in people:
     if len(leaders) == 3: break
-    found = [r for r in gather(['"' + name + '" (AI OR 人工智能 OR 机器人 OR 科研)', '"' + name + '" (演讲 OR 发表 OR 发布 OR 研究)'], leader=True) if name.lower() in r['title'].lower() and r['source'].lower() not in ('x', 'twitter', '搜狐', 'sohu') and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传','最新消息：','政治通牒','被搞了','说白了','震惊','爆料'))]
+    found = [r for r in gather(['"' + name + '" (AI OR 人工智能 OR 机器人 OR 科研)', '"' + name + '" (演讲 OR 发表 OR 发布 OR 研究)'], leader=True) if name.lower() in r['title'].lower() and leader_valid(r)]
     if found and not any(name in n or n in name for n in leader_names):
         r = sorted(found, key=lambda item: (score(item), len(item['title']) <= 65), reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
