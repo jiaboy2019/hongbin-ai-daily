@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/daily-auto.yml'
+      - 'daily_auto.py'
   workflow_dispatch:
   schedule:
     - cron: '30 21 * * *'
@@ -63,4 +64,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Rerun after fixing Python regex string syntax.
+# Auto-test whenever Python generator changes; avoid duplicate script blocks.
