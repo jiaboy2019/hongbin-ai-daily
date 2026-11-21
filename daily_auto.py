@@ -110,10 +110,15 @@ people = [
     ('苏姿丰', 'AMD CEO'), ('纳德拉', '微软CEO'),
     ('李飞飞', 'AI科学家'), ('马斯克', 'xAI创始人'),
     ('李彦宏', '百度创始人'), ('吴泳铭', '阿里巴巴CEO'),
+    ('扎克伯格', 'Meta CEO'), ('皮查伊', '谷歌CEO'),
+    ('库克', '苹果CEO'), ('阿莫迪', 'Anthropic CEO'),
+    ('杨立昆', 'AI科学家'), ('辛顿', 'AI科学家'),
+    ('梁文锋', 'DeepSeek创始人'), ('周鸿祎', '360创始人'),
+    ('雷军', '小米创始人'), ('王小川', '百川智能创始人'),
 ]
 leaders, selected, leader_names = [], [], []
 for name, role in people:
-    found = [r for r in gather([name, name + ' AI', name + ' 科技']) if name in r['title']]
+    found = [r for r in gather([name, name + ' 人工智能', name + ' 最新动态']) if name in r['title'] and not any(w in r['title'] for w in ('离职传闻','被捕','据称','传闻','网传'))]
     if found:
         r = sorted(found, key=score, reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
@@ -124,6 +129,7 @@ for name, role in people:
 
 used = {r['key'] for r in selected}
 news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
+print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4 or len(leaders) < 3:
     raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
 news = sorted(news, key=score, reverse=True)[:4]
