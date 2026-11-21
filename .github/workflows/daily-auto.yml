@@ -52,3 +52,5 @@ jobs:
           git commit -m 'Generate daily AI briefing' || exit 0
           git pull --rebase -X ours origin main
           git push
+
+# Recheck international source balance and image diversity.
