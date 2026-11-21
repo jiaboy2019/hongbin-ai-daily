@@ -52,8 +52,9 @@
       "article": "https://www.ithome.com/1/029/841.htm",
       "images": [
         {
-          "url": "https://raw.githubusercontent.com/Tencent-Hunyuan/Hy4/main/assets/benchmark.jpg",
-          "evidence": "https://github.com/Tencent-Hunyuan/Hy4"
+          "url": "https://huggingface.co/tencent/Hy4/resolve/main/assets/logo-en.png",
+          "evidence": "https://huggingface.co/tencent/Hy4",
+          "fit": "contain"
         }
       ]
     },

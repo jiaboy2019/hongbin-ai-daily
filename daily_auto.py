@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+from itertools import combinations
 import os
 from tempfile import TemporaryDirectory
 
@@ -118,8 +119,16 @@ class ArticleMetadata(HTMLParser):
         super().__init__()
         self.meta = {}
         self.links = []
+        self.paragraphs = []
+        self.article_paragraphs = []
+        self._article_depth = 0
+        self._paragraph = None
 
     def handle_starttag(self, tag, attrs):
+        if tag == 'article':
+            self._article_depth += 1
+        if tag == 'p':
+            self._paragraph = []
         if tag == 'meta':
             values = dict(attrs)
             key = values.get('property') or values.get('name')
@@ -129,6 +138,21 @@ class ArticleMetadata(HTMLParser):
             url = dict(attrs).get('href')
             if url:
                 self.links.append(url)
+
+    def handle_data(self, data):
+        if self._paragraph is not None:
+            self._paragraph.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == 'p' and self._paragraph is not None:
+            value = tidy(''.join(self._paragraph))
+            if len(value) >= 18:
+                self.paragraphs.append(value)
+                if self._article_depth:
+                    self.article_paragraphs.append(value)
+            self._paragraph = None
+        elif tag == 'article' and self._article_depth:
+            self._article_depth -= 1
 
 
 def article_meta_summary(url):
@@ -147,7 +171,7 @@ def publisher_article(url):
             redirect_source = publisher_for(resp.geturl())
             if not redirect_source or redirect_source['name'] != source['name']:
                 return None
-            page = resp.read(450_000).decode(resp.headers.get_content_charset('utf-8'), 'replace')
+            page = resp.read(950_000).decode(resp.headers.get_content_charset('utf-8'), 'replace')
         parser = ArticleMetadata()
         parser.feed(page)
         meta = parser.meta
@@ -162,7 +186,8 @@ def publisher_article(url):
             if re.fullmatch(r'\d{4}-\d\d-\d\d[T ]\d\d:\d\d(?::\d\d)?', date):
                 date += '+08:00'
         description = tidy(meta.get('og:description') or meta.get('description'))[:600]
-        return title, date, description
+        paragraphs = parser.article_paragraphs or parser.paragraphs
+        return title, date, description, tuple(paragraphs[:14])
     except (OSError, ValueError, LookupError):
         return None
 
@@ -299,7 +324,7 @@ def web_source(source, url=None):
     for link in list(links.values())[:6]:
         metadata = publisher_article(link)
         if metadata:
-            title, date, description = metadata
+            title, date, description = metadata[:3]
             row = candidate(title, link, date, description, 'web')
             if row and in_window(row, PERSON_HOURS):
                 rows.append(row)
@@ -407,6 +432,7 @@ def aihot_candidates():
 
 MEDIA = json.loads((ROOT / 'editorial_media.json').read_text('utf-8'))
 GENERIC_IMAGE = re.compile(r'(?:^|[/_.-])(?:logo|placeholder|default|avatar|favicon|site-icon)(?:[/_.-]|$)', re.I)
+BUSY_COVER = re.compile(r'benchmark|chart\b|bar.graph|headquarters|company.building|评测图|柱状图|总部大楼', re.I)
 
 
 def verified_person(name):
@@ -422,7 +448,7 @@ def verified_person(name):
 
 
 @lru_cache(maxsize=80)
-def download_image(url):
+def download_image(url, contain=False):
     if not url.startswith('https://'):
         return None
     try:
@@ -436,8 +462,16 @@ def download_image(url):
         with Image.open(io.BytesIO(blob)) as source:
             if min(source.size) < 150 or max(source.size) > 8000:
                 return None
-            picture = source.convert('RGB')
-        picture.thumbnail((720, 720))
+            picture = source.convert('RGBA')
+        if contain:
+            picture.thumbnail((640, 410), Image.Resampling.LANCZOS)
+            canvas = Image.new('RGB', (720, 478), 'white')
+            offset = ((canvas.width - picture.width) // 2, (canvas.height - picture.height) // 2)
+            canvas.paste(picture, offset, picture)
+            picture = canvas
+        else:
+            picture = picture.convert('RGB')
+            picture.thumbnail((720, 720))
         buffer = io.BytesIO()
         picture.save(buffer, format='JPEG', quality=88)
         bytes_out = buffer.getvalue()
@@ -463,10 +497,12 @@ def article_images(url):
         parser.feed(page)
         if parser.meta.get('og:type', '').lower() not in ('article', 'news.article') and not publisher_article(url):
             return []
+        alt = parser.meta.get('og:image:alt', '')
         return [
             {'url': urllib.parse.urljoin(final_url, value), 'evidence': url}
             for key in ('og:image:secure_url', 'og:image', 'twitter:image')
             if (value := parser.meta.get(key)) and not GENERIC_IMAGE.search(urllib.parse.urlsplit(value).path)
+            and not BUSY_COVER.search(urllib.parse.urlsplit(value).path + ' ' + alt)
         ]
     except (OSError, ValueError, LookupError):
         return []
@@ -497,7 +533,7 @@ def prepare_images(news, leaders):
                 if url in used_urls or url in attempted:
                     continue
                 attempted.append(url)
-                image = download_image(url)
+                image = download_image(url, contain=candidate.get('fit') == 'contain')
                 if image and image[1] not in hashes:
                     ready[slot] = image[0]
                     hashes.add(image[1])
@@ -917,20 +953,78 @@ def editorial_rank(row):
             - row['age_hours'] / 4)
 
 
-def short_body(row, limit, headline=''):
-    if not valid_description(row):
-        return ''
-    text = to_chinese(row['description'])
-    title = to_chinese(row['title'])
-    for sentence in re.split(r'(?<=[。！？])|(?<=[.!?])\s+', text):
-        options = [sentence, *re.split(r'[，；;]', sentence)]
-        for clause in options:
-            body = complete_excerpt(clause, limit)
-            if (body and len(re.findall(r'[\u4e00-\u9fff]', body)) >= 8
-                    and not any(similar(body, other) for other in (title, headline))
-                    and not body.startswith(('据', '随着', '为了', '除了', '当时', '在此背景下', '其中'))):
-                return body
-    return ''
+SUMMARY_DETAIL = re.compile(r'\d|支持|实现|新增|配备|开放|试用|部署|处理|可用|适用|选择|转录|训练|'
+                            r'输入|输出|包括|覆盖|允许|上线|用户|开发者|人员|团队|目前|首批')
+SUMMARY_USE = re.compile(r'用户|开发者|研究人员|消防|学生|医生|可以|便于|可用|用于|部署|试用|接入|'
+                         r'缩短|减少|能够|通过|无需')
+SUMMARY_NOISE = re.compile(r'注册领取|接受全部|隐私政策|订阅|广告合作|电子邮件地址|阅读原文|点击查看|'
+                           r'版权所有|最新资讯|责任编辑|上一篇|下一篇|^相关阅读|^来源[:：]|^作者[:：]', re.I)
+
+
+def summary_parts(paragraphs, titles, limit):
+    parts = []
+    translated = 0
+    for paragraph in paragraphs:
+        if SUMMARY_NOISE.search(paragraph):
+            continue
+        if len(paragraph) > 470:
+            ends = list(re.finditer(r'[。！？]|[.!?](?=\s|$)', paragraph[:470]))
+            if not ends:
+                continue
+            paragraph = paragraph[:ends[-1].end()]
+        if not re.search(r'[\u4e00-\u9fff]{2}', paragraph):
+            if translated >= 3:
+                continue
+            translated += 1
+        text = to_chinese(paragraph)
+        for raw in re.split(r'(?<=[。！？])|(?<=[.!?])\s+', text):
+            clauses = [raw, *re.split(r'[；;]', raw)]
+            if len(raw) >= limit and not re.search(r'如果|除非|只要|一旦|仅当|前提', raw):
+                clauses.extend(re.split(r'[，,](?=开发者|用户|研究人员|该工具|该模型|模型|团队|权重)', raw))
+            for clause in clauses:
+                fact = clean_attribution(clause).strip(' ，,；;：:。')
+                if (not 12 <= len(fact) < limit or len(re.findall(r'[\u4e00-\u9fff]', fact)) < 8
+                        or '…' in fact or '...' in fact
+                        or not SUMMARY_DETAIL.search(fact)
+                        or fact.startswith(('据', '随着', '为了', '除了', '当时', '在此背景下', '同时', '其中'))
+                        or fact.endswith(('将', '并', '与', '及', '和', '为', '在', '对', '包括', '从', '表示'))
+                        or any(similar(fact, other) for other in titles)
+                        or SUMMARY_NOISE.search(fact) or blocked({'body': fact})):
+                    continue
+                sentence = fact if fact.endswith(('！', '？', '!', '?')) else fact + '。'
+                if sentence not in parts:
+                    parts.append(sentence)
+                    if len(parts) == 14:
+                        return parts
+    return parts
+
+
+def select_summary(parts, target, limit):
+    best, best_rank = '', ()
+    for count in range(1, min(3, len(parts)) + 1):
+        for block in combinations(parts, count):
+            body = ''.join(block)
+            if len(body) > limit or any(similar(a, b) for a, b in combinations(block, 2)):
+                continue
+            rank = (len(body) >= target, min(2, count), bool(SUMMARY_USE.search(body)),
+                    bool(re.search(r'\d', body)), len(body))
+            if rank > best_rank:
+                best, best_rank = body, rank
+    return best
+
+
+def news_summary(row, minimum, maximum, headline=''):
+    titles = (to_chinese(row['title']), headline)
+    description = tidy(row.get('description', ''))
+    feed_parts = summary_parts([description], titles, maximum)
+    body = select_summary(feed_parts, minimum, maximum)
+    if len(body) >= minimum and body.count('。') >= 2:
+        return body
+    article = publisher_article(row.get('article_url', ''))
+    if article:
+        extra = summary_parts([article[2], *article[3]], titles, maximum)
+        return select_summary(list(dict.fromkeys(feed_parts[:5] + extra))[:14], minimum, maximum)
+    return body
 
 
 def enrich(row):
@@ -998,7 +1092,7 @@ def choose_people(rows, history):
             if not (story is not row and is_chinese_text(row['title'])
                     and publishable_title(row, 23) and event_profile(headline)):
                 continue
-        body = short_body(row, 54, headline)
+        body = news_summary(row, 35, 55, headline)
         if not body:
             continue
         stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
@@ -1035,7 +1129,7 @@ def choose_news(rows, history, people_rows):
                 continue
             if any(duplicate_event(row, other) for other in history + people_rows + selected):
                 continue
-            title_limit, body_limit = (32, 73) if not selected else (22, 48)
+            title_limit = 32 if not selected else 22
             if not is_chinese_ready(row) or not publishable_title(row, title_limit):
                 continue
             headline = short_headline(row['title'], title_limit)
@@ -1045,7 +1139,8 @@ def choose_news(rows, history, people_rows):
             row = enrich(row)
             if blocked(row):
                 continue
-            body = short_body(row, body_limit, headline)
+            minimum, maximum = (65, 90) if not selected else (45, 65)
+            body = news_summary(row, minimum, maximum, headline)
             if not body:
                 continue
             cards.append({

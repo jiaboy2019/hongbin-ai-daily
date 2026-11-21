@@ -81,6 +81,32 @@ class EditorialTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '图片待处理'):
             daily.render_png({}, images)
 
+    def test_summary_expands_thin_feed_from_original_article(self):
+        row = {
+            'title': '腾讯混元开放 Hy4 模型权重',
+            'description': '腾讯混元开放 Hy4 模型权重。',
+            'article_url': 'https://www.ithome.com/1/029/841.htm',
+        }
+        article = ('标题', '', '', (
+            '模型支持大约一百万 token 的上下文，能处理文本、图片和视频。',
+            '开发者可以从四个平台下载模型权重，并在自己的环境部署。',
+            '点击查看最新资讯，立即注册领取会员福利。',
+        ))
+        with patch.object(daily, 'publisher_article', return_value=article) as fetch:
+            body = daily.news_summary(row, 45, 65, row['title'])
+        fetch.assert_called_once_with(row['article_url'])
+        self.assertIn('上下文', body)
+        self.assertIn('四个平台', body)
+        self.assertNotIn('注册', body)
+        self.assertNotIn(row['title'], body)
+        self.assertTrue(45 <= len(body) <= 65)
+
+    def test_summary_uses_only_supported_detail_when_source_is_thin(self):
+        row = {'title': '新版本上线', 'description': '该入口仅面向已有账号的付费用户开放。',
+               'article_url': 'https://openai.com/index/feature'}
+        with patch.object(daily, 'publisher_article', return_value=None):
+            self.assertEqual(daily.news_summary(row, 45, 65), row['description'])
+
     def test_pollution_and_person_name(self):
         self.assertTrue(daily.blocked({'description': 'm6米乐app在线登陆官网'}))
         self.assertTrue(daily.blocked({'title': '有传言称公司推出机器人'}))
