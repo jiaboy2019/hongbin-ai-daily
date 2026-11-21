@@ -38,6 +38,14 @@ jobs:
         run: |
           rm -f output/daily.json output/洪滨每日AI早报.png
           python daily_auto.py
+      - name: Upload editorial review on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hongbin-editorial-review
+          path: output/editorial_review.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload PNG
         uses: actions/upload-artifact@v4
         with:
@@ -53,4 +61,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Validate Chinese named-person searches with strict publication gates.
+# Test candidate review artifact on quality-gate failure.
