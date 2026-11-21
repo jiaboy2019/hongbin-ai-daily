@@ -419,6 +419,23 @@ def identify_person(title):
     # 未列入明确人物名单的名字，需要具备职务及姓名的上下文。
     return None, None
     return None, None
+def relevant_ai_person_event(title):
+    """人物本人参与的AI事件；不把纯融资、债券或股市报道当人物动态。"""
+    low = title.lower()
+    finance_only = ('债券','债务','融资','募资','股价','股市','股票','财报','估值',
+                    'bond','debt','financing','fundraising','valuation','shares','stock')
+    ai_terms = ('人工智能','大模型','语言模型','世界模型','机器人','智能体','芯片',
+                'gemini','chatgpt','deepseek','grok','claude','agent',
+                'artificial intelligence','machine learning','robot','llm','gpu')
+    # "AI" 作为独立词匹配，避免把普通英文单词里的 ai 误判为人工智能。
+    has_ai = any(term in low for term in ai_terms) or bool(re.search(r'(?<![a-z])ai(?![a-z])',low))
+    if not has_ai: return False
+    if any(term in low for term in finance_only) and not any(term in low for term in
+        ('模型','机器人','智能体','科研','芯片','发布','开源','训练','产品',
+         'model','robot','agent','chip','research','launch','release')):
+        return False
+    return True
+
 def is_chinese_text(t):
     return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
 enrich_person_summaries(leader_rows, identify_person)
@@ -427,7 +444,7 @@ for r in sorted(leader_rows, key=score, reverse=True):
     if not name or name in leader_names: continue
     if score(r)<8 or not editorial_eligible(r) or not valid_description(r): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
-    if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
+    if not relevant_ai_person_event(r['title']): continue
     if not is_chinese_text(r['title']) or not is_chinese_text(r.get('description','')): continue
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
@@ -438,7 +455,7 @@ if len(leaders) < 3:
     for r in extra:
         name, role = identify_person(r['title'])
         if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8 or not valid_description(r): continue
-        if not any(w in r['title'].lower() for w in ('ai','人工智能','模型','机器人','芯片','智能体','科研','发布','技术','agent','robot')): continue
+        if not relevant_ai_person_event(r['title']): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
