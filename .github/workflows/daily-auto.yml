@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Validate AI leader summaries before candidate selection.
+# Reject source-only RSS descriptions and require factual leader summaries.
