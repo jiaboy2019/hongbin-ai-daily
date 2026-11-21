@@ -23,6 +23,8 @@ for path in PATHS:
                     row["list_field"]=k
                     row["count_in_sample"]=len(v)
                     if v and isinstance(v[0],dict):row["item_fields"]=list(v[0].keys())[:35]
+                    if k=="items":
+                        row["sample_shapes"]=[{"source_type":type(it.get("source")).__name__,"source_sample":str(it.get("source"))[:120],"links_type":type(it.get("links")).__name__,"links_sample":str(it.get("links"))[:250],"publishedAt":str(it.get("publishedAt"))[:45],"score":it.get("score")} for it in v[:4] if isinstance(it,dict)]
                     break
         elif isinstance(obj,list):
             row["count_in_sample"]=len(obj)
