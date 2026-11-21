@@ -81,6 +81,56 @@ def gather(queries, leader=False, international=False):
     return sorted(rows, key=score, reverse=True) if not leader else rows
 
 
+# 独立 RSS 来源：与 Google News 搜索互补。失败时跳过，不影响日报生成。
+DIRECT_FEEDS = [
+ ('OpenAI','https://openai.com/news/rss.xml'),
+ ('Google DeepMind','https://deepmind.google/blog/rss.xml'),
+ ('Google Research','https://research.google/blog/rss/'),
+ ('Google AI','https://blog.google/innovation-and-ai/technology/ai/rss/'),
+ ('Hugging Face','https://huggingface.co/blog/feed.xml'),
+ ('NVIDIA','https://blogs.nvidia.com/feed/'),
+ ('TechCrunch','https://techcrunch.com/category/artificial-intelligence/feed/'),
+ ('The Verge','https://www.theverge.com/rss/ai-artificial-intelligence/index.xml'),
+ ('Ars Technica','https://arstechnica.com/ai/feed/'),
+ ('WIRED','https://www.wired.com/feed/tag/ai/latest/rss'),
+ ('MIT Technology Review','https://www.technologyreview.com/topic/artificial-intelligence/feed'),
+ ('IEEE Spectrum','https://spectrum.ieee.org/feeds/feed.rss'),
+ ('MIT News','https://news.mit.edu/rss/topic/artificial-intelligence2'),
+ ('The Decoder','https://the-decoder.com/feed/'),
+ ('arXiv AI','https://rss.arxiv.org/rss/cs.AI'),
+ ('量子位','https://www.qbitai.com/feed'),
+ ('机器之心','https://www.jiqizhixin.com/rss'),
+ ('36氪','https://36kr.com/feed'),
+]
+def direct_feed_rows():
+    result = []
+    ns = {'atom':'http://www.w3.org/2005/Atom'}
+    for source, url in DIRECT_FEEDS:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 HongbinDaily/1.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                root = ET.fromstring(resp.read(1_500_000))
+            entries = root.findall('.//item') or root.findall('.//atom:entry', ns)
+            count = 0
+            for item in entries:
+                title = tidy(item.findtext('title') or item.findtext('atom:title', default='', namespaces=ns))
+                date_str = item.findtext('pubDate') or item.findtext('atom:published', default='', namespaces=ns) or item.findtext('atom:updated', default='', namespaces=ns)
+                try:
+                    when = parsedate_to_datetime(date_str) if not date_str.endswith('Z') else dt.datetime.fromisoformat(date_str.replace('Z','+00:00'))
+                    if when.tzinfo is None: when = when.replace(tzinfo=dt.timezone.utc)
+                    age = (dt.datetime.now(dt.timezone.utc)-when.astimezone(dt.timezone.utc)).total_seconds()
+                    if not 0 <= age <= 18*3600: continue
+                except Exception: continue
+                description = tidy(item.findtext('description') or item.findtext('atom:summary', default='', namespaces=ns))
+                if len(description) < 25 or title in description: description = ''
+                row = {'title':title,'source':source,'key':norm(title),'description':description}
+                if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p['title']) for p in state['items'][-100:]):
+                    result.append(row); count+=1
+            print('独立源:',source,count)
+        except Exception as e:
+            print('独立源不可用，已跳过:',source,str(e)[:100])
+    return result
+
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
 PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing'}
 
@@ -205,13 +255,15 @@ news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器�
 # 国际媒体独立采集，不能只使用中国区中文搜索。
 international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
 news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
+direct_news = direct_feed_rows()
+news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4 or len(leaders) < 3:
     raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
 # 新闻不再受预设配图词表限制，按媒体报道候选选取。
 news = sorted(news, key=score, reverse=True)
 # 优先兼顾国际媒体和中文媒体，并避免四条都来自同一来源。
-intl = [r for r in news if r in international_news]
+intl = [r for r in news if r in international_news or (r in direct_news and r['source'] not in ('量子位','机器之心','36氪'))]
 domestic = [r for r in news if r not in international_news]
 chosen = []
 for pool in (intl, domestic, intl, domestic, news):
