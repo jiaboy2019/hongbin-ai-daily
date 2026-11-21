@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "人工智能抛售对金属市场造成严重破坏，铜价暴跌加剧",
-    "body": "人工智能抛售对金属市场造成严重破坏，铜价暴跌加剧。",
+    "title": "散户投资者涉足人类贸易的双方",
+    "body": "散户投资者涉足人类贸易的双方。",
     "source": "Bloomberg.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "人类工作人员声称数学黎曼假设的解决方案",
-      "body": "人类工作人员声称数学黎曼假设的解决方案。",
+      "title": "人工智能网络威胁已经来临",
+      "body": "人工智能网络威胁已经来临。",
       "source": "Financial Times"
     },
     {
       "tag": "产品应用",
-      "title": "OpenAI发布AI新进展",
-      "body": "发布“地球最强”模型仅几天后 OpenAI首席科学家发长文呼吁放慢AI开发。",
-      "source": "财联社"
+      "title": "百度世界2026发布多项AI成果",
+      "body": "百度世界2026发布多项AI成果，李彦宏：AI下一幕是“智能组织”。",
+      "source": "风闻"
     },
     {
       "tag": "前沿科技",
-      "title": "Meta发布最强AI模型",
-      "body": "Meta发布最强AI模型：编程直追OpenAI。",
-      "source": "金十数据"
+      "title": "马化腾第四次改腾讯AI航道",
+      "body": "马化腾第四次改腾讯AI航道。",
+      "source": "钛媒体"
     }
   ],
   "leaders": [
     {
+      "name": "梁文锋｜DeepSeek创始人",
+      "title": "DeepSeek限额与开放同行",
+      "body": "DeepSeek限额与开放同行，梁文锋到底想做什么。",
+      "source": "财富号"
+    },
+    {
+      "name": "Sam Altman｜OpenAI CEO",
+      "title": "OpenAI公布AI相关动态",
+      "body": "OpenAI 首席执行官 Sam Altman 称阿联酋是世界上人工智能采用方面最具前瞻性的国家。",
+      "source": "Fast Company Middle East"
+    },
+    {
       "name": "Jensen Huang｜英伟达CEO",
-      "title": "Nvidia 可以在没有黄仁勋的情况下运行",
-      "body": "Nvidia 可以在没有黄仁勋的情况下运行。 AI能否蓬勃发展。",
-      "source": "Fortune"
-    },
-    {
-      "name": "Dario Amodei｜Anthropic CEO",
-      "title": "Anthropic公布AI相关动态",
-      "body": "Anthropic 首席执行官 Dario Amodei 谈人工智能模型的节奏。",
-      "source": "CNBC"
-    },
-    {
-      "name": "Satya Nadella｜微软CEO",
-      "title": "微软首席执行官萨蒂亚纳德拉",
-      "body": "微软首席执行官萨蒂亚纳德拉：人工智能将改变员工角色。",
-      "source": "TechGig"
+      "title": "OpenAI 的 Sam Altman",
+      "body": "OpenAI 的 Sam Altman：很难想象没有黄仁勋的人工智能行业。",
+      "source": "Tempo.co English"
     }
   ]
 }
