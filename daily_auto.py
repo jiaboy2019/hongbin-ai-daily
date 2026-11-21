@@ -349,7 +349,7 @@ def complete_excerpt(text, limit):
     text = clean_attribution(text).replace('…', '').replace('...', '')
     text = text.strip(' ，,；;：:')
     if len(text) <= limit:
-        return text if text and not re.search(r'^(?:\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)?\\s*消息[。.]?
+        return text if text and not re.fullmatch(r'(?:\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)?\\s*消息[。.]?', text) else ''
     # Prefer a complete sentence or a short factual clause.
     for clause in re.split(r'[。！？!?；;，,]', text):
         clause = clause.strip()
