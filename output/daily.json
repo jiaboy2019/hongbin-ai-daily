@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "Sakana Applied Research …",
-    "body": "据explainx.ai报道：Sakana Applied Research Lab: Finance AI Agents (2026)。",
-    "source": "explainx.ai"
+    "title": "Microsoft Begins Rolling Out Au…",
+    "body": "据Redmondmag.com报道：Microsoft Begins Rolling Out Autopilot, Its Always-On Personal AI Age…",
+    "source": "Redmondmag.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "苹果组建团队研发自主AI智能体 最早20…",
-      "body": "据Sohu报道：苹果组建团队研发自主AI智能体 最早2027年底推出 可跨应用完成多步骤任务。",
-      "source": "Sohu"
+      "title": "Visa扩展Agentic Ready，助力全球可…",
+      "body": "据Business Wire报道：Visa扩展Agentic Ready，助力全球可信AI 商务规模化发展。",
+      "source": "Business Wire"
     },
     {
       "tag": "产品应用",
-      "title": "Microsoft adds contr…",
-      "body": "据Superpower Daily报道：Microsoft adds controls for third-party and local AI a…",
-      "source": "Superpower Daily"
+      "title": "AI Agent places new deman…",
+      "body": "据Vietnam.vn报道：AI Agent places new demands on marketing and sales strategie…",
+      "source": "Vietnam.vn"
     },
     {
       "tag": "前沿科技",
-      "title": "FalsifyAgent：基于逆向溯因重…",
-      "body": "据生物通报道：FalsifyAgent：基于逆向溯因重构与对抗协同演化的科学智能体可信赖性验证框架。",
-      "source": "生物通"
+      "title": "SpaceX旗下AI编程平台Cursor考虑放弃中…",
+      "body": "据英为财情 Investing.com报道：SpaceX旗下AI编程平台Cursor考虑放弃中国AI模型 提供者 Investing.com。",
+      "source": "英为财情 Investing.com"
     }
   ],
   "leaders": [
     {
-      "name": "科技动态｜媒体报道",
-      "title": "广东文化“爆款”频出背后：AI重塑产业边界",
-      "body": "广东文化“爆款”频出背后：AI重塑产业边界",
-      "source": "21财经"
+      "name": "Sam Altman｜OpenAI CEO",
+      "title": "MAN AND ROBOTS: This I…",
+      "body": "据Substack报道：MAN AND ROBOTS: This Is Why Jeff Bezos Didn’t W…",
+      "source": "Substack"
     },
     {
-      "name": "科技动态｜媒体报道",
-      "title": "深耕精品树内容旗舰，四川聚力AI漫剧出海“下…",
-      "body": "深耕精品树内容旗舰，四川聚力AI漫剧出海“下半场”",
-      "source": "川观新闻"
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "AI trade stocks hit ha…",
+      "body": "据Investing.com报道：AI trade stocks hit hardest after Jensen H…",
+      "source": "Investing.com"
     },
     {
-      "name": "科技动态｜媒体报道",
-      "title": "林俊旸离开阿里巴巴创业 语用科技估值升至50…",
-      "body": "林俊旸离开阿里巴巴创业 语用科技估值升至50亿美元",
-      "source": "KLSE Screener"
+      "name": "Demis Hassabis｜Google DeepMind CEO",
+      "title": "‘Apology accepted’: Go…",
+      "body": "据The Times of India报道：‘Apology accepted’: Google chief scie…",
+      "source": "The Times of India"
     }
   ]
 }
