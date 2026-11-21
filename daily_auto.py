@@ -280,8 +280,9 @@ def fetch_news_image(title, used_pages=None):
 
 translation_cache = {}
 translation_unavailable = False
+fallback_translation_attempts = 0
 def to_chinese(text):
-    global translation_unavailable
+    global translation_unavailable, fallback_translation_attempts
     if text in translation_cache: return translation_cache[text]
     if not text or len(re.findall(r'[A-Za-z]', text)) < max(12, len(text)//3): return text
     # Primary translator; if rate-limited, try a second independent provider.
@@ -298,6 +299,8 @@ def to_chinese(text):
         except Exception as exc:
             if '429' in str(exc): translation_unavailable = True
             print('主翻译源不可用:',str(exc)[:80])
+    if fallback_translation_attempts >= 16: return text
+    fallback_translation_attempts += 1
     try:
         # Fallback is only for translation, not for inventing missing article facts.
         query = urllib.parse.urlencode({'q':text[:480], 'langpair':'en|zh-CN'})
