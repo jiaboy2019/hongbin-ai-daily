@@ -336,35 +336,61 @@ def to_chinese(text):
         print('备用翻译源不可用:',str(exc)[:80])
     return text
 
-def article_body(row, limit):
-    title = to_chinese(row['title'].strip())
-    desc = to_chinese(row.get('description', '').strip())
-    # 未翻译的英文摘要不能直接印在中文版早报上。
-    # 翻译源限流时，只保留已经中文化的事实，不发布英文整段。
-    if desc and len(desc) >= 25 and len(re.findall('[一-鿿]', desc)) >= 12:
-        return clip(desc, limit)
-    # RSS 未提供独立摘要时，不捏造新闻事实。以报道来源和原始标题补足信息。
-    # 如翻译失败，不把英文标题重复印成正文。
-    if len(re.findall('[一-鿿]', title)) < 8:
-        return '原文摘要暂未完成中文转换，建议编辑核对报道后发布。'
-    return clip(title.rstrip('。！？!?') + '。', limit)
+def clean_attribution(text):
+    """Remove repetitive publisher lead-ins; source is displayed separately."""
+    text = tidy(text)
+    text = re.sub(r'^(?:据|根据|来自)\\s*[^，。:：]{1,28}?(?:报道|消息|披露|介绍|称|显示)[，,:：\\s]*', '', text)
+    text = re.sub(r'^(?:报道称|消息称|媒体报道)[，,:：\\s]*', '', text)
+    return text.strip()
 
-def clip(s, n):
-    return s if len(s) <= n else s[:n-1] + '…'
+def complete_excerpt(text, limit):
+    """Never output a mechanically clipped sentence or an ellipsis."""
+    text = clean_attribution(text).replace('…', '').replace('...', '')
+    text = text.strip(' ，,；;：:')
+    if len(text) <= limit:
+        return text
+    # Prefer a complete sentence or a short factual clause.
+    for clause in re.split(r'[。！？!?；;，,]', text):
+        clause = clause.strip()
+        if 8 <= len(clause) <= limit - 1 and not clause.endswith(('将','并','和','与','及','为','在','对','称','表示')):
+            return clause + '。'
+    return ''
 
 def short_headline(raw, limit=22):
-    """Prefer a complete short clause, never truncate a headline with ellipsis."""
-    title = to_chinese(raw).strip()
+    """Produce a short, complete factual statement, never an unfinished title."""
+    title = clean_attribution(to_chinese(raw)).rstrip('。！？!?')
     title = re.split(r'\\s+[-–—|｜]\\s+', title)[0].strip()
-    title = title.rstrip('。！？!?')
-    if len(title) <= limit:
+    if len(title) <= limit and not title.endswith(('将','并','和','与','及','为','在','对')):
         return title
     clauses = re.split(r'[，,；;。！？!?：:]', title)
     for clause in clauses:
         clause = clause.strip(' “”“‘’')
-        if 6 <= len(clause) <= limit and not clause.endswith(('将','称','表示','推出','发布')):
+        if 7 <= len(clause) <= limit and not clause.endswith(('将','并','和','与','及','为','在','对','称','表示')):
             return clause
-    return title
+    compressed = re.sub(r'（[^）]*）|\\([^)]*\\)', '', clauses[0])
+    compressed = re.sub(r'(?:重磅|刚刚|首次|正式|最新|全新|重大|惊人|突然|宣布|成功)', '', compressed)
+    compressed = re.sub(r'“[^”]{6,}”', '', compressed).strip(' ，,：:；;')
+    if 7 <= len(compressed) <= limit and not compressed.endswith(('将','并','和','与','及','为','在','对')):
+        return compressed
+    # Use an intentionally general but complete headline instead of cutting a claim mid-sentence.
+    for actor in ('OpenAI','Anthropic','Google','微软','英伟达','Meta','苹果','华为','DeepSeek','阿里','腾讯','百度','宇树','NVIDIA'):
+        if actor.lower() in title.lower():
+            return actor + ('发布AI新进展' if '发布' in title or '推出' in title else '公布AI相关动态')
+    return '人工智能领域出现新进展'
+
+def article_body(row, limit):
+    title = to_chinese(row['title'].strip())
+    desc = to_chinese(row.get('description', '').strip())
+    if desc and len(re.findall('[一-鿿]', desc)) >= 12:
+        result = complete_excerpt(desc, limit)
+        if result: return result
+    result = complete_excerpt(title.rstrip('。！？!?') + '。', limit)
+    if result: return result
+    return short_headline(title, min(limit-1, 28)) + '。'
+
+def clip(s, n):
+    """Keep existing non-news clipping behavior unchanged."""
+    return s if len(s) <= n else s[:n-1] + '…'
 
 people = [
     ('黄仁勋', '英伟达CEO'), ('奥尔特曼', 'OpenAI CEO'),
