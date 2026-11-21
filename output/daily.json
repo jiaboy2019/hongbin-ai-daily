@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "12 张二手英伟达 V100：律师自建 AI 集群跑 Deep…",
-    "body": "IT之家 11 月 21 日消息，律师 u/TumbleweedNew6515 昨日（11 月 20 日）在 Reddit 社区发帖，斥资 9,450 美元（IT之家注：现汇…",
-    "source": "IT之家"
+    "title": "人择研究人员声称与克劳德一起解决了黎曼问题",
+    "body": "人择研究人员声称与克劳德一起解决了黎曼问题。",
+    "source": "Bloomberg.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "刚刚，DeepSeek V1作者创业项目曝光：开源…",
-      "body": "据量子位报道：刚刚，DeepSeek V1作者创业项目曝光：开源Agent。",
-      "source": "量子位"
+      "title": "随着科技股暴跌，人类股票下跌",
+      "body": "随着科技股暴跌，人类股票下跌。",
+      "source": "Financial Times"
     },
     {
       "tag": "产品应用",
-      "title": "华为云开源昇腾原生具身世界模型CloudRobo-…",
-      "body": "据InfoQ报道：华为云开源昇腾原生具身世界模型CloudRobo-WM1.2，两项评测均列第一。",
-      "source": "InfoQ"
+      "title": "OpenAI 为 Plus 用户带来协作 Space 中心",
+      "body": "OpenAI 为 Plus 用户带来协作 Space 中心。",
+      "source": "Engadget AI"
     },
     {
       "tag": "前沿科技",
-      "title": "微软发布 7 款“世界级”新模型，全在打同一个算盘…",
-      "body": "据OSCHINA报道：微软发布 7 款“世界级”新模型，全在打同一个算盘 - OSCHINA - 开源 × AI · 开发者生态社区。",
-      "source": "OSCHINA"
+      "title": "人工智能中最容易被误解的图表刚刚进行了重大更新",
+      "body": "人工智能评估非营利组织 METR 的一份新报告发现，一些人工智能能力正在沿着指数轨迹持续改进，…",
+      "source": "MIT Technology Review"
     }
   ],
   "leaders": [
     {
-      "name": "吴泳铭｜阿里巴巴CEO",
-      "title": "阿里巴巴CEO 吴泳铭：千问已在平头哥芯片训…",
-      "body": "据IT之家报道：阿里巴巴CEO 吴泳铭：千问已在平头哥芯片训练下一代模型，百炼基于国产芯片提供模型推理服务。",
-      "source": "IT之家"
-    },
-    {
       "name": "黄仁勋｜英伟达CEO",
-      "title": "没有黄仁勋的英伟达，还能守住芯片霸主地位吗？",
-      "body": "据第一财经报道：没有黄仁勋的英伟达，还能守住芯片霸主地位吗？。",
-      "source": "第一财经"
+      "title": "黄仁勋被拒回归后",
+      "body": "黄仁勋被拒回归后！微软高管：英伟达风波将促使客户考虑采用其他公司AI芯片。",
+      "source": "驱动之家"
     },
     {
-      "name": "王兴兴｜宇树科技创始人",
-      "title": "王兴兴：机器人泛化能力将迎突破 技术临界点已现",
-      "body": "据中华网报道：王兴兴：机器人泛化能力将迎突破 技术临界点已现。",
-      "source": "中华网"
+      "name": "阿莫迪｜Anthropic CEO",
+      "title": "阿莫迪看好AI加速医学突破 预期人类寿命延长至150岁",
+      "body": "阿莫迪看好AI加速医学突破 预期人类寿命延长至150岁。",
+      "source": "China Press"
+    },
+    {
+      "name": "吴泳铭｜阿里巴巴CEO",
+      "title": "平头哥三代 GPU 加速推进",
+      "body": "吴泳铭：平头哥三代 GPU 加速推进，正成为阿里全栈 AI 的支撑底座。",
+      "source": "IT之家"
     }
   ]
 }
