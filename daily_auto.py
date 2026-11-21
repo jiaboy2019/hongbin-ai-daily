@@ -364,10 +364,18 @@ def short_headline(raw, limit=22):
     if len(title) <= limit and not title.endswith(('将','并','和','与','及','为','在','对')):
         return title
     clauses = re.split(r'[，,；;。！？!?：:]', title)
-    for clause in clauses:
-        clause = clause.strip(' “”“‘’')
-        if 7 <= len(clause) <= limit and not clause.endswith(('将','并','和','与','及','为','在','对','称','表示')):
-            return clause
+    # Prefer the clause containing the actual AI event, not an introductory slogan.
+    vague = ('面向先锋者','三年销售目标','从实验室走向工厂','反超','之后','新选择','完美风暴','价格泄露')
+    actions = ('发布','推出','上线','开源','研发','落地','应用','训练','升级','部署','成立','合作','突破','进入','宣布','推出','采用')
+    topics = ('AI','人工智能','模型','机器人','智能体','芯片','OpenAI','Claude','Gemini','华为','微软','谷歌','英伟达')
+    candidates = [c.strip(' “”“‘’') for c in clauses]
+    candidates = [c for c in candidates if 7 <= len(c) <= limit
+                  and not c.endswith(('将','并','和','与','及','为','在','对','称','表示','之后','之前'))
+                  and not any(v in c for v in vague)]
+    informative = [c for c in candidates if any(v in c for v in actions)
+                   and any(t.lower() in c.lower() for t in topics)]
+    if informative: return informative[0]
+    if candidates: return candidates[0]
     compressed = re.sub(r'（[^）]*）|\\([^)]*\\)', '', clauses[0])
     compressed = re.sub(r'(?:重磅|刚刚|首次|正式|最新|全新|重大|惊人|突然|宣布|成功)', '', compressed)
     compressed = re.sub(r'“[^”]{6,}”', '', compressed).strip(' ，,：:；;')
