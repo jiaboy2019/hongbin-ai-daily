@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "8万条群聊消息做成考卷",
-    "body": "8万条群聊消息做成考卷：腾讯元宝×KCL发布首个基于群聊构建的Agent记忆基准。",
-    "source": "量子位"
+    "title": "面向先锋者的新选择",
+    "body": "面向先锋者的新选择，业界首款鸿蒙AI手机华为OSTA星芒 O1 Pro登场。",
+    "source": "凤凰网"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "OpenAI推出MedChemBench基准",
-      "body": "OpenAI推出MedChemBench基准，评估人工智能辅助药物研发能力。",
-      "source": "凤凰网科技"
+      "title": "三年销售目标700亿",
+      "body": "三年销售目标700亿！京东与华为OSTA星芒达成战略合作 深化产品共建与AI生态协同。",
+      "source": "CSDN"
     },
     {
       "tag": "产品应用",
-      "title": "Anthropic公布AI相关动态",
-      "body": "Anthropic的数学家声称在167年历史的数学问题上取得了人工智能辅助的突破。",
-      "source": "Anadolu Ajansı"
+      "title": "开放原子人形机器人开源社区工作委员会成立",
+      "body": "开放原子人形机器人开源社区工作委员会成立。",
+      "source": "中国科技网"
     },
     {
       "tag": "前沿科技",
-      "title": "成功在高考中抓获 54 名违规考生",
-      "body": "IT之家 11 月 21 日消息。",
-      "source": "IT之家"
+      "title": "从实验室走向工厂",
+      "body": "从实验室走向工厂，智元精灵G2机器人落地蓝思科技手机测试产线。",
+      "source": "中国基金报"
     }
   ],
   "leaders": [
     {
       "name": "Satya Nadella｜微软CEO",
-      "title": "在“完美风暴”袭击微软之后",
-      "body": "在“完美风暴”袭击微软之后。",
-      "source": "New York Post"
-    },
-    {
-      "name": "Mark Zuckerberg｜Meta CEO",
-      "title": "价格已在网上泄露",
-      "body": "马克·扎克伯格即将推出Muse Charm AI小工具，价格已在网上泄露。",
-      "source": "India Today"
+      "title": "人工智能可能会引发更多技术故障",
+      "body": "微软首席执行官萨蒂亚·纳德拉表示，人工智能可能会引发更多技术故障。",
+      "source": "Toronto Sun"
     },
     {
       "name": "Sam Altman｜OpenAI CEO",
-      "title": "人工智能领域出现新进展",
-      "body": "埃隆·马斯克嘲笑萨姆·阿尔特曼的内存和人工智能数据中心。",
-      "source": "Yahoo Tech"
+      "title": "未来4年的人工智能发展不会像过去4年那样",
+      "body": "萨姆·阿尔特曼警告称，未来4年的人工智能发展不会像过去4年那样。",
+      "source": "Forbes"
+    },
+    {
+      "name": "马斯克｜xAI创始人",
+      "title": "机器人能做家务了",
+      "body": "机器人能做家务了。",
+      "source": "Jiemian.com"
     }
   ]
 }
