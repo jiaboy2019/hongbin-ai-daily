@@ -132,7 +132,7 @@ def direct_feed_rows():
     return result
 
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
-PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing'}
+PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing', 'Sam Altman':'Sam_Altman','Jensen Huang':'Jensen_Huang','Demis Hassabis':'Demis_Hassabis','Dario Amodei':'Dario_Amodei','Sundar Pichai':'Sundar_Pichai','Satya Nadella':'Satya_Nadella','Mark Zuckerberg':'Mark_Zuckerberg','Fei-Fei Li':'Fei-Fei_Li','Geoffrey Hinton':'Geoffrey_Hinton','Yann LeCun':'Yann_LeCun','Andrew Ng':'Andrew_Ng'}
 
 def fetch_wiki_thumbnail(title):
     if not title: return None
@@ -244,7 +244,7 @@ leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '
 name_roles = dict(people)
 def identify_person(title):
     for name, role in name_roles.items():
-        if name.lower() in title.lower(): return name, role
+        if re.search(r'(?<![A-Za-z])'+re.escape(name)+r'(?![A-Za-z])',title,re.I): return name, role
     m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
     if m: return m.group(1), '科技人物'
     m = re.search(r'^([\\u4e00-\\u9fff]{2,4})[：称说表示认为谈]', title)
@@ -253,6 +253,8 @@ def identify_person(title):
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
+    if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t')): continue
+    if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
@@ -288,6 +290,15 @@ for pool in (intl, domestic, intl, domestic, news):
             chosen.append(r); break
     if len(chosen) == 4: break
 news = chosen if len(chosen) == 4 else news[:4]
+# 翻译服务可能限流。优先选取已有中文标题的新闻，避免英文截断出现在朋友圈。
+def is_chinese_ready(row):
+    t = to_chinese(row['title'])
+    return len(re.findall(r'[\\u4e00-\\u9fff]', t)) >= 6
+if not all(is_chinese_ready(r) for r in news):
+    ready = [r for r in news if is_chinese_ready(r)]
+    ready += [r for r in sorted(domestic+direct_news, key=score, reverse=True) if r not in ready and is_chinese_ready(r)]
+    news = ready[:4] if len(ready)>=4 else news
+
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
