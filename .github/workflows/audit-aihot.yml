@@ -1,0 +1,22 @@
+name: Audit AIHOT public API
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - probe_aihot.py
+      - .github/workflows/audit-aihot.yml
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python probe_aihot.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aihot-probe
+          path: output/aihot_probe.json
