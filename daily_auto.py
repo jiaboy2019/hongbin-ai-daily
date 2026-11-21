@@ -218,6 +218,47 @@ def direct_feed_rows(max_age_hours=18):
             print('独立源不可用，已跳过:',source,str(e)[:100])
     return result
 
+# AIHOT 是辅助发现渠道，不直接作为新闻事实来源；失败时回退原有采集。
+def aihot_candidates(max_age_hours=18):
+    url = 'https://aihot.news/api/v1/items'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)', 'Accept':'application/json'})
+        with urllib.request.urlopen(req, timeout=12) as response:
+            payload = json.load(response)
+        items = payload.get('items', []) if isinstance(payload, dict) else []
+        rows = []
+        for item in items:
+            if not isinstance(item, dict): continue
+            title = tidy(item.get('title') or item.get('originalTitle') or '')
+            published = item.get('publishedAt') or ''
+            try:
+                when = dt.datetime.fromisoformat(published.replace('Z', '+00:00'))
+                if when.tzinfo is None: continue
+                age = (dt.datetime.now(dt.timezone.utc) - when.astimezone(dt.timezone.utc)).total_seconds()/3600
+                if not 0 <= age <= max_age_hours: continue
+            except (ValueError, TypeError, AttributeError): continue
+            links = item.get('links') or []
+            link = ''
+            if isinstance(links, list):
+                for candidate in links:
+                    candidate_url = candidate if isinstance(candidate, str) else (candidate.get('url') or candidate.get('href') or '') if isinstance(candidate, dict) else ''
+                    if isinstance(candidate_url, str) and candidate_url.startswith('https://') and 'aihot.news' not in urllib.parse.urlparse(candidate_url).netloc:
+                        link = candidate_url; break
+            if not link: continue  # 必须可追溯原始来源
+            source = item.get('source') or ''
+            if isinstance(source, dict): source = source.get('name') or source.get('title') or ''
+            if not isinstance(source, str) or not source.strip(): continue
+            row = {'title':title, 'source':source[:30], 'key':norm(title),
+                   'description':tidy(item.get('summary') if isinstance(item.get('summary'),str) else '')[:450],
+                   'article_url':link, 'age_hours':age, 'discovered_via':'AIHOT'}
+            if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p.get('title','')) for p in state['items'][-100:]):
+                rows.append(row)
+        print('AIHOT 18小时有效候选:',len(rows))
+        return rows
+    except Exception as exc:
+        print('AIHOT 不可用，回退原有新闻来源:',str(exc)[:150])
+        return []
+
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
 PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing', 'Sam Altman':'Sam_Altman','Jensen Huang':'Jensen_Huang','Demis Hassabis':'Demis_Hassabis','Dario Amodei':'Dario_Amodei','Sundar Pichai':'Sundar_Pichai','Satya Nadella':'Satya_Nadella','Mark Zuckerberg':'Mark_Zuckerberg','Fei-Fei Li':'Fei-Fei_Li','Geoffrey Hinton':'Geoffrey_Hinton','Yann LeCun':'Yann_LeCun','Andrew Ng':'Andrew_Ng'}
 
@@ -618,6 +659,8 @@ site_queries_intl_zh = [
 site_news = gather(site_queries_cn) + gather(site_queries_intl_zh) + gather(site_queries_en, international=True)
 news.extend(r for r in site_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
+# AIHOT 仅补充有原始链接、明确时间和来源的候选；沿用原有评分与去重。
+news.extend(r for r in aihot_candidates() if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4:
     raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4。保持原模板和新闻标准，停止出图。')
