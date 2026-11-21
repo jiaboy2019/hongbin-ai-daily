@@ -291,7 +291,10 @@ people = [
 # 开放式人物候选：从新闻报道本身识别人名；上面的名单仅作补充，不是准入限制。
 leaders, selected, leader_names = [], [], []
 leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '科技公司 CEO AI', '机器人 创始人 表示', 'AI 研究者 发布', '科技人物 人工智能']
+direct_news = direct_feed_rows()
 leader_rows = gather(leader_queries, leader=True)
+# 直接媒体 RSS 自带事实摘要，优先补充其中真正涉及具体人物的报道。
+leader_rows += [r for r in direct_news if valid_description(r)]
 # 补充人物定向搜索；人物名单只用于拓宽搜索，不是入选门槛。
 leader_rows += gather(['黄仁勋 AI', '马斯克 xAI', '奥尔特曼 OpenAI', '苏姿丰 AI', '李飞飞 AI', '库克 Apple AI', 'Demis Hassabis AI', 'Sam Altman AI'], leader=True, international=True)
 # 直接以中文检索具体人物，减少英文翻译服务限流造成的遗漏。
@@ -338,7 +341,6 @@ news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器�
 # 国际媒体独立采集，不能只使用中国区中文搜索。
 international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
 news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
-direct_news = direct_feed_rows()
 news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4:
