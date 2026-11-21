@@ -53,4 +53,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Recheck international source balance and image diversity.
+# Test direct publisher descriptions and richer sourced summaries.
