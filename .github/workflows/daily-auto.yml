@@ -61,4 +61,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test detailed leader candidate diagnostics on quality-gate failure.
+# Test independent-summary news selection and failure review report.
