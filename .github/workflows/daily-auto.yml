@@ -61,4 +61,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test candidate review artifact on quality-gate failure.
+# Test detailed leader candidate diagnostics on quality-gate failure.
