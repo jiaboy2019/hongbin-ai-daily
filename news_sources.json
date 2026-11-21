@@ -1,0 +1,236 @@
+{
+  "policy": "International and US editorial sources first; official AI research and product news; Chinese outlets only as fallback. Web entries require public metadata; no paywall bypass.",
+  "sources": [
+    {
+      "name": "TechCrunch",
+      "region": "US",
+      "type": "rss",
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "priority": 1
+    },
+    {
+      "name": "The Verge",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "priority": 1
+    },
+    {
+      "name": "MIT Technology Review",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
+      "priority": 1
+    },
+    {
+      "name": "Ars Technica",
+      "region": "US",
+      "type": "rss",
+      "url": "https://arstechnica.com/ai/feed/",
+      "priority": 1
+    },
+    {
+      "name": "WIRED",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.wired.com/feed/tag/ai/latest/rss",
+      "priority": 1
+    },
+    {
+      "name": "VentureBeat",
+      "region": "US",
+      "type": "rss",
+      "url": "https://venturebeat.com/category/ai/feed/",
+      "priority": 1
+    },
+    {
+      "name": "IEEE Spectrum",
+      "region": "US",
+      "type": "rss",
+      "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
+      "priority": 1
+    },
+    {
+      "name": "Associated Press",
+      "region": "US",
+      "type": "web",
+      "url": "https://apnews.com/hub/artificial-intelligence",
+      "priority": 1
+    },
+    {
+      "name": "Bloomberg",
+      "region": "US",
+      "type": "web",
+      "url": "https://www.bloomberg.com/technology",
+      "priority": 1
+    },
+    {
+      "name": "The New York Times",
+      "region": "US",
+      "type": "rss",
+      "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+      "priority": 1
+    },
+    {
+      "name": "CNBC",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
+      "priority": 1
+    },
+    {
+      "name": "ZDNET",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.zdnet.com/news/rss.xml",
+      "priority": 1
+    },
+    {
+      "name": "The Wall Street Journal",
+      "region": "US",
+      "type": "web",
+      "url": "https://www.wsj.com/tech/ai",
+      "priority": 1
+    },
+    {
+      "name": "The Information",
+      "region": "US",
+      "type": "web",
+      "url": "https://www.theinformation.com/",
+      "priority": 1
+    },
+    {
+      "name": "CNET",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.cnet.com/rss/news/",
+      "priority": 1
+    },
+    {
+      "name": "Engadget",
+      "region": "US",
+      "type": "rss",
+      "url": "https://www.engadget.com/rss.xml",
+      "priority": 1
+    },
+    {
+      "name": "BBC News",
+      "region": "UK",
+      "type": "rss",
+      "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+      "priority": 3
+    },
+    {
+      "name": "The Guardian",
+      "region": "UK",
+      "type": "rss",
+      "url": "https://www.theguardian.com/uk/technology/rss",
+      "priority": 3
+    },
+    {
+      "name": "Financial Times",
+      "region": "UK",
+      "type": "rss",
+      "url": "https://www.ft.com/rss/home/international",
+      "priority": 3
+    },
+    {
+      "name": "The Economist",
+      "region": "UK",
+      "type": "web",
+      "url": "https://www.economist.com/science-and-technology",
+      "priority": 3
+    },
+    {
+      "name": "The Register",
+      "region": "UK",
+      "type": "atom",
+      "url": "https://www.theregister.com/software/ai_ml/headlines.atom",
+      "priority": 3
+    },
+    {
+      "name": "Reuters",
+      "region": "International",
+      "type": "web",
+      "url": "https://www.reuters.com/technology/",
+      "priority": 3
+    },
+    {
+      "name": "Euronews",
+      "region": "Europe",
+      "type": "rss",
+      "url": "https://www.euronews.com/rss",
+      "priority": 3
+    },
+    {
+      "name": "Deutsche Welle",
+      "region": "Germany",
+      "type": "rss",
+      "url": "https://rss.dw.com/rdf/rss-en-top",
+      "priority": 3
+    },
+    {
+      "name": "France 24",
+      "region": "France",
+      "type": "rss",
+      "url": "https://www.france24.com/en/rss",
+      "priority": 3
+    },
+    {
+      "name": "Der Spiegel International",
+      "region": "Germany",
+      "type": "rss",
+      "url": "https://www.spiegel.de/international/index.rss",
+      "priority": 3
+    },
+    {
+      "name": "Nature",
+      "region": "UK",
+      "type": "rss",
+      "url": "https://www.nature.com/nature.rss",
+      "priority": 3
+    },
+    {
+      "name": "OpenAI",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://openai.com/news/rss.xml",
+      "priority": 2
+    },
+    {
+      "name": "Google DeepMind",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "priority": 2
+    },
+    {
+      "name": "Google Research",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://research.google/blog/rss/",
+      "priority": 2
+    },
+    {
+      "name": "Hugging Face",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "priority": 2
+    },
+    {
+      "name": "NVIDIA",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://blogs.nvidia.com/feed/",
+      "priority": 2
+    },
+    {
+      "name": "MIT News",
+      "region": "Official",
+      "type": "rss",
+      "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+      "priority": 2
+    }
+  ]
+}
