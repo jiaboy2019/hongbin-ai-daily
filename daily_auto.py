@@ -455,16 +455,12 @@ def relevant_ai_person_event(title):
     return True
 
 def eligible_person_report(row):
-    # 人物动态不沿用“重大科技突破”的高分门槛；但仍须是可信的AI相关报道。
+    # 正规媒体报道直接作为候选，不再要求独立摘要、动词模板或重大突破评分。
+    # 保留明确的高风险标题排除及AI相关性，避免虚构、广告和无关新闻。
     if not editorial_eligible(row): return False
-    # 人物栏目允许从有明确事实的中文标题提炼简讯；不能因为 Google News
-    # RSS 未附独立摘要就丢弃整条真实报道。
-    if not valid_description(row):
-        title = row.get('title','')
-        if len(re.findall('[一-鿿]', title)) < 10: return False
-        if not any(w in title for w in ('表示','称','认为','指出','介绍','发布','推出','分享','聊','访谈','宣布','谈','透露','展示','呼吁','建议','解释','回应','预测','完成','开发','应用','使用','开源','研究')): return False
-    if score(row) == -100: return False
     if not relevant_ai_person_event(row['title'] + ' ' + row.get('description','')): return False
+    if len(row.get('title','').strip()) < 9: return False
+    if any(w in row['title'].lower() for w in ('博彩','竞猜','广告推广','sponsored content')): return False
     return True
 
 def is_chinese_text(t):
@@ -639,7 +635,7 @@ def valid_summary(row):
     return bool(row.get('headline_only_person')
                 and identify_person(row['title'])[0]
                 and eligible_person_report(row)
-                and len(re.findall('[一-鿿]', row['title'])) >= 10)
+                and len(row['title'].strip()) >= 9)
 
 if len(leaders) != 3:
     # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
