@@ -53,4 +53,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test direct publisher descriptions and richer sourced summaries.
+# Test strict editorial quality gates and safe same-day regeneration.
