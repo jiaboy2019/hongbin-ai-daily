@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "黄光裕的哥哥，已经在商用机器人上赚了40倍",
-    "body": "黄光裕的哥哥，已经在商用机器人上赚了40倍。",
-    "source": "36氪"
+    "title": "上市后 Anthropic 首席执行官在意大利度假村度假",
+    "body": "上市后 Anthropic 首席执行官在意大利度假村度假。",
+    "source": "Bloomberg.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "穆拉蒂开源“循环脑”模型",
-      "body": "27B！穆拉蒂开源“循环脑”模型：笔记本跑Agent起飞。",
-      "source": "智东西"
+      "title": "Metano 斥资 1200 万美元推出",
+      "body": "Metano 斥资 1200 万美元推出，以确保企业 AI 代理的安全。",
+      "source": "SC Media"
     },
     {
       "tag": "产品应用",
-      "title": "美参议员痛批苹果、谷歌",
-      "body": "IT之家 11 月 21 日消息。",
-      "source": "IT之家"
+      "title": "反超Gemini之后",
+      "body": "反超Gemini之后，Karpo新作再开源，浏览器Agent速效双赢。",
+      "source": "量子位"
     },
     {
       "tag": "前沿科技",
-      "title": "在AI帮助下已解决数学界最著名难题",
-      "body": "Anthropic数学家宣称：在AI帮助下已解决数学界最著名难题。",
-      "source": "ThePaper.cn"
+      "title": "人择学声称取得了数学突破",
+      "body": "世界简述：人择学声称取得了数学突破；人工智能市场依然紧张。",
+      "source": "The Economist"
     }
   ],
   "leaders": [
     {
+      "name": "黄仁勋｜英伟达CEO",
+      "title": "前英伟达 AI 应用软件产品管理总监回忆黄仁勋",
+      "body": "IT之家 11 月 21 日消息。",
+      "source": "IT之家"
+    },
+    {
       "name": "Satya Nadella｜微软CEO",
-      "title": "萨蒂亚·纳德拉希望微软员工成为人工智能经理",
-      "body": "萨蒂亚·纳德拉希望微软员工成为人工智能经理，而不是传统的员工。",
-      "source": "www.techtimes.co.uk"
+      "title": "微软向约 6 万名员工提供自愿买断",
+      "body": "微软向约 6 万名员工提供自愿买断，萨蒂亚·纳德拉 (Satya Nadella) 表示人工智能就是原因。",
+      "source": "Crypto Briefing"
     },
     {
       "name": "Jensen Huang｜英伟达CEO",
-      "title": "加州总检察长就黄仁勋的丑闻传唤英伟达",
-      "body": "加州总检察长就黄仁勋的丑闻传唤英伟达，以调查AI芯片是否受到损害。",
-      "source": "San Francisco Chronicle"
-    },
-    {
-      "name": "Dario Amodei｜Anthropic CEO",
-      "title": "Anthropic公布AI相关动态",
-      "body": "Anthropic首席执行官Dario Amodei在纳斯达克演讲中再次承诺将推动人工智能的发展。",
-      "source": "CNBC"
+      "title": "英伟达公布AI相关动态",
+      "body": "尼莱·帕特尔 (Nilay Patel) 谈人工智能时代的决定性缺陷：脆弱性。",
+      "source": "BigGo Finance"
     }
   ]
 }
