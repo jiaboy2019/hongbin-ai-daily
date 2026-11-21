@@ -61,4 +61,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test independent-summary news selection and failure review report.
+# Verify Python syntax fix and substantive summary gate.
