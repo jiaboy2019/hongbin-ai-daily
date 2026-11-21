@@ -331,9 +331,14 @@ def to_chinese(text):
 def article_body(row, limit):
     title = to_chinese(row['title'].strip())
     desc = to_chinese(row.get('description', '').strip())
-    if desc and len(desc) >= 25:
+    # 未翻译的英文摘要不能直接印在中文版早报上。
+    # 翻译源限流时，只保留已经中文化的事实，不发布英文整段。
+    if desc and len(desc) >= 25 and len(re.findall('[一-鿿]', desc)) >= 12:
         return clip(desc, limit)
     # RSS 未提供独立摘要时，不捏造新闻事实。以报道来源和原始标题补足信息。
+    # 如翻译失败，不把英文标题重复印成正文。
+    if len(re.findall('[一-鿿]', title)) < 8:
+        return '原文摘要暂未完成中文转换，建议编辑核对报道后发布。'
     return clip('据'+row['source']+'报道：'+title+'。', limit)
 
 def clip(s, n):
@@ -385,7 +390,9 @@ def identify_person(title):
         if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
             return name, role
     m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\s]*([\u4e00-\u9fff]{2,4})(?:[：，称说表示认为谈]|\s)', title)
-    if m: return m.group(1), '科技人物'
+    # “CEO预测”“科学家表示”等标题不是姓名；拒绝把普通动词当人名。
+    if m and m.group(1) not in ('预测','表示','认为','透露','宣布','发布','警告','指出','建议','回应','分析','称赞','谈论','介绍','发现','研究','专家','团队','未来','人工','智能','最新','全球','公司','行业'):
+        return m.group(1), '科技人物'
     # 只凭标题开头的两个汉字无法可靠判断是人名，容易把“拷问”等动词当人物。
     # 未列入明确人物名单的名字，需要具备职务及姓名的上下文。
     return None, None
