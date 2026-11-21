@@ -19,7 +19,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；修复库克等科技人物肖像映射并复测完整出图
+    # 使用固定母版进行完整出图验收；取消人物和图片硬性限制，优先稳定出图
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
