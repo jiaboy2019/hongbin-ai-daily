@@ -146,8 +146,11 @@ def direct_feed_rows():
                     age = (dt.datetime.now(dt.timezone.utc)-when.astimezone(dt.timezone.utc)).total_seconds()
                     if not 0 <= age <= 18*3600: continue
                 except Exception: continue
-                description = tidy(item.findtext('description') or item.findtext('atom:summary', default='', namespaces=ns))
-                if len(description) < 25 or title in description: description = ''
+                description = tidy(item.findtext('description') or item.findtext('{http://purl.org/rss/1.0/modules/content/}encoded') or item.findtext('atom:summary', default='', namespaces=ns) or item.findtext('atom:content', default='', namespaces=ns))
+                # 直接媒体源提供的独立摘要优先；仅删除标题重复前缀，不丢弃整段正文。
+                if description.startswith(title): description = description[len(title):].strip(' -—:：')
+                if len(description) < 25: description = ''
+                description = description[:450]
                 row = {'title':title,'source':source,'key':norm(title),'description':description}
                 if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p['title']) for p in state['items'][-100:]):
                     result.append(row); count+=1
@@ -234,7 +237,7 @@ def to_chinese(text):
 def article_body(row, limit):
     title = to_chinese(row['title'].strip())
     desc = to_chinese(row.get('description', '').strip())
-    if desc and desc.lower() not in title.lower() and title.lower() not in desc.lower():
+    if desc and len(desc) >= 25:
         return clip(desc, limit)
     # RSS 未提供独立摘要时，不捏造新闻事实。以报道来源和原始标题补足信息。
     return clip('据'+row['source']+'报道：'+title+'。', limit)
