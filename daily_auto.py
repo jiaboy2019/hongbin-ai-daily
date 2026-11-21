@@ -464,7 +464,7 @@ def download_image(url, contain=False):
                 return None
             picture = source.convert('RGBA')
         if contain:
-            picture.thumbnail((640, 410), Image.Resampling.LANCZOS)
+            picture.thumbnail((684, 410), Image.Resampling.LANCZOS)
             canvas = Image.new('RGB', (720, 478), 'white')
             offset = ((canvas.width - picture.width) // 2, (canvas.height - picture.height) // 2)
             canvas.paste(picture, offset, picture)
