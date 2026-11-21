@@ -864,6 +864,29 @@ data = {
     'updates': [{'tag': tag, 'title': short_headline(r['title'], 22), 'body': article_body(r, 48), 'source': r['source']} for tag, r in zip(['AI动态', '产品应用', '前沿科技'], news[1:])],
     'leaders': leaders + [{'name':'科技人物动态｜待补充','title':'暂无可确认的人物报道','body':'继续关注国内外科技人物的最新公开动态。','source':'—'} for _ in range(3-len(leaders))],
 }
+# 最终出图闸门：标题可能经过缩写，必须同时检查正文与来源。
+# 宁可停止本期出图，也不能把博彩广告或明显污染的内容自动发布。
+EDITORIAL_BLOCKLIST = (
+    '博彩', '竞猜', '投注平台', '在线登陆官网', '在线登录官网', '米乐app',
+    'm6米乐', '现金网', '体育投注', 'betting', 'casino', 'gambling',
+    '沙巴官网', '推广链接', '点击注册', '邀请码',
+)
+def validate_final_editorial(payload):
+    problems = []
+    cards = [('headline', payload['headline'])]
+    cards += [(f'updates[{i}]', card) for i,card in enumerate(payload['updates'])]
+    cards += [(f'leaders[{i}]', card) for i,card in enumerate(payload['leaders'])]
+    for label, card in cards:
+        combined = ' '.join(str(card.get(k, '')) for k in ('name','title','body','source')).lower()
+        bad = next((w for w in EDITORIAL_BLOCKLIST if w.lower() in combined), None)
+        if bad: problems.append({'slot':label, 'reason':'blocked_advertising_term', 'term':bad})
+        if not card.get('source') or card.get('source') == '—':
+            problems.append({'slot':label, 'reason':'missing_source'})
+    if problems:
+        path = OUT / 'editorial_review.json'
+        path.write_text(json.dumps({'issue':payload['issue'],'date':payload['date'],'problems':problems,'status':'rejected'},ensure_ascii=False,indent=2),encoding='utf-8')
+        raise RuntimeError('最终编辑检查未通过，已阻止出图：'+json.dumps(problems,ensure_ascii=False))
+validate_final_editorial(data)
 # International mainstream media are preferred; shortage is logged, not a fatal error.
 print('国际媒体优先：本期国际主流媒体', sum(international_primary_source(item) for item in news[:4]), '/4')
 with sync_playwright() as p:
