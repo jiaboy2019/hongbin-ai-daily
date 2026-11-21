@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "上市后 Anthropic 首席执行官在意大利度假村度假",
-    "body": "上市后 Anthropic 首席执行官在意大利度假村度假。",
+    "title": "贝森特称，Anthropic 创始人将向特朗普账户捐款",
+    "body": "贝森特称，Anthropic 创始人将向特朗普账户捐款。",
     "source": "Bloomberg.com"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "Metano 斥资 1200 万美元推出",
-      "body": "Metano 斥资 1200 万美元推出，以确保企业 AI 代理的安全。",
-      "source": "SC Media"
+      "title": "华为首款AI手机不到6千元 宣称有3大突破",
+      "body": "华为首款AI手机不到6千元 宣称有3大突破。",
+      "source": "万维读者网"
     },
     {
       "tag": "产品应用",
-      "title": "反超Gemini之后",
-      "body": "反超Gemini之后，Karpo新作再开源，浏览器Agent速效双赢。",
-      "source": "量子位"
-    },
-    {
-      "tag": "前沿科技",
-      "title": "人择学声称取得了数学突破",
-      "body": "世界简述：人择学声称取得了数学突破；人工智能市场依然紧张。",
-      "source": "The Economist"
-    }
-  ],
-  "leaders": [
-    {
-      "name": "黄仁勋｜英伟达CEO",
-      "title": "前英伟达 AI 应用软件产品管理总监回忆黄仁勋",
+      "title": "课题覆盖大模型安全攻防等",
       "body": "IT之家 11 月 21 日消息。",
       "source": "IT之家"
     },
     {
+      "tag": "前沿科技",
+      "title": "扩大校园人工智能工作",
+      "body": "IIT Kharagpur获Google 500万美元资助，扩大校园人工智能工作。",
+      "source": "Unite.AI"
+    }
+  ],
+  "leaders": [
+    {
       "name": "Satya Nadella｜微软CEO",
-      "title": "微软向约 6 万名员工提供自愿买断",
-      "body": "微软向约 6 万名员工提供自愿买断，萨蒂亚·纳德拉 (Satya Nadella) 表示人工智能就是原因。",
-      "source": "Crypto Briefing"
+      "title": "000 笔收购反映出向人工智能管理工作的转变",
+      "body": "萨蒂亚·纳德拉 (Satya Nadella) 表示，微软的 60,000 笔收购反映出向人工智能管理工作的转变。",
+      "source": "AI Insider"
     },
     {
-      "name": "Jensen Huang｜英伟达CEO",
-      "title": "英伟达公布AI相关动态",
-      "body": "尼莱·帕特尔 (Nilay Patel) 谈人工智能时代的决定性缺陷：脆弱性。",
-      "source": "BigGo Finance"
+      "name": "Mark Zuckerberg｜Meta CEO",
+      "title": "马克·扎克伯格的元人工智能预测翻转",
+      "body": "马克·扎克伯格的元人工智能预测翻转：ADA 如何翻转 XRP。",
+      "source": "Cryptonews"
+    },
+    {
+      "name": "Sam Altman｜OpenAI CEO",
+      "title": "山姆·奥特曼电影的海报看起来像 AI slop",
+      "body": "山姆·奥特曼电影的海报看起来像 AI slop。这实际上是绝妙的营销。",
+      "source": "Fast Company"
     }
   ]
 }
