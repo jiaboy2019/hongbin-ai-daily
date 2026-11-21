@@ -1,6 +1,9 @@
 name: 洪滨每日AI早报
 
 on:
+  push:
+    paths:
+      - '.github/workflows/daily-auto.yml'
   workflow_dispatch:
   schedule:
     - cron: '30 21 * * *'
