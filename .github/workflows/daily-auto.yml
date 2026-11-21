@@ -53,4 +53,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test strict editorial quality gates and safe same-day regeneration.
+# Validate Chinese named-person searches with strict publication gates.
