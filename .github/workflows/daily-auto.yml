@@ -5,13 +5,22 @@ on:
     paths:
       - '.github/workflows/daily-auto.yml'
       - 'daily_auto.py'
+      - 'news_sources.json'
+      - 'editorial_media.json'
+      - 'index.html'
+      - 'test_daily_auto.py'
   workflow_dispatch:
+    inputs:
+      test_only:
+        description: '仅生成测试产物'
+        type: boolean
+        default: true
   schedule:
     - cron: '30 21 * * *'
 
 concurrency:
-  group: hongbin-daily-generate
-  cancel-in-progress: true
+  group: hongbin-daily-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -20,9 +29,12 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；复测全球AI大厂及重大技术进展优先、地方资讯降权
+    env:
+      FORMAL: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.test_only)) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: ${{ env.FORMAL == 'true' }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -39,29 +51,45 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Generate daily image
         run: |
-          rm -f output/daily.json output/洪滨每日AI早报.png
-          python daily_auto.py
+          python -m unittest -v
+          if [[ "$FORMAL" == true ]]; then
+            python daily_auto.py --formal
+          else
+            python daily_auto.py --test
+          fi
       - name: Upload editorial review on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: hongbin-editorial-review
-          path: output/editorial_review.json
+          path: ${{ env.FORMAL == 'true' && 'output/editorial_review.json' || 'test-output/editorial_review.json' }}
           if-no-files-found: warn
           retention-days: 7
+      - name: Upload source diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hongbin-source-diagnostics
+          path: ${{ env.FORMAL == 'true' && 'output/source_report.json' || 'test-output/source_report.json' }}
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload PNG
         uses: actions/upload-artifact@v4
         with:
-          name: hongbin-ai-daily
-          path: output/
+          name: ${{ env.FORMAL == 'true' && 'hongbin-ai-daily' || 'hongbin-ai-daily-test' }}
+          path: |
+            ${{ env.FORMAL == 'true' && 'output/daily.json' || 'test-output/daily.json' }}
+            ${{ env.FORMAL == 'true' && 'output/洪滨每日AI早报.png' || 'test-output/洪滨每日AI早报.png' }}
+          if-no-files-found: error
           retention-days: 30
       - name: Save history and latest PNG
+        if: env.FORMAL == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add published_history.json output/
-          git commit -m 'Generate daily AI briefing' || exit 0
-          git pull --rebase -X ours origin main
-          git push
+          git add -- published_history.json output/daily.json output/洪滨每日AI早报.png
+          git diff --cached --quiet && exit 0
+          git commit -m 'Generate daily AI briefing'
+          git push origin HEAD:refs/heads/main
 
 # Auto-test whenever Python generator changes; avoid duplicate script blocks.
