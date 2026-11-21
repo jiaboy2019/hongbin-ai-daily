@@ -166,39 +166,22 @@ def gather(queries, leader=False, international=False):
 
 
 # 独立 RSS 来源：与 Google News 搜索互补。失败时跳过，不影响日报生成。
+# 经 GitHub Actions 实测的英文媒体和官方 RSS；其余配置保留待复测。
+# 新闻来源以 news_sources.json 为准，不再维护重复的硬编码媒体名单。
+AUDITED_FEED_NAMES = {
+    'TechCrunch', 'The Verge', 'MIT Technology Review', 'Ars Technica',
+    'WIRED', 'IEEE Spectrum', 'The New York Times', 'CNBC', 'ZDNET',
+    'CNET', 'Engadget', 'BBC News', 'The Guardian', 'Financial Times',
+    'The Register', 'Euronews', 'France 24', 'Der Spiegel International',
+    'Google DeepMind', 'Google Research', 'Hugging Face', 'NVIDIA',
+}
+SOURCE_REGISTRY = json.loads((ROOT / 'news_sources.json').read_text('utf-8'))['sources']
 DIRECT_FEEDS = [
- ('OpenAI','https://openai.com/news/rss.xml'),
- ('Google DeepMind','https://deepmind.google/blog/rss.xml'),
- ('Google Research','https://research.google/blog/rss/'),
- ('Google AI','https://blog.google/innovation-and-ai/technology/ai/rss/'),
- ('Hugging Face','https://huggingface.co/blog/feed.xml'),
- ('NVIDIA','https://blogs.nvidia.com/feed/'),
- ('TechCrunch','https://techcrunch.com/category/artificial-intelligence/feed/'),
- ('The Verge','https://www.theverge.com/rss/ai-artificial-intelligence/index.xml'),
- ('Ars Technica','https://arstechnica.com/ai/feed/'),
- ('WIRED','https://www.wired.com/feed/tag/ai/latest/rss'),
- ('MIT Technology Review','https://www.technologyreview.com/topic/artificial-intelligence/feed'),
- ('IEEE Spectrum','https://spectrum.ieee.org/feeds/feed.rss'),
- ('MIT News','https://news.mit.edu/rss/topic/artificial-intelligence2'),
- ('The Decoder','https://the-decoder.com/feed/'),
- ('arXiv AI','https://rss.arxiv.org/rss/cs.AI'),
- ('量子位','https://www.qbitai.com/feed'),
- ('机器之心','https://www.jiqizhixin.com/rss'),
- ('36氪','https://36kr.com/feed'),
- # 扩展来源：新增真实媒体/研究机构的公开订阅地址，失效源自动跳过。
- ('钛媒体','https://www.tmtpost.com/rss'),
- ('InfoQ','https://www.infoq.cn/feed'),
- ('IT之家','https://www.ithome.com/rss/'),
- ('雷峰网','https://www.leiphone.com/feed'),
- ('Engadget AI','https://www.engadget.com/category/ai/feed/'),
- ('The Register','https://www.theregister.com/software/ai_ml/headlines.atom'),
- ('Meta News','https://about.fb.com/news/feed/'),
- ('Meta Engineering','https://engineering.fb.com/feed/'),
- ('Google Cloud AI','https://cloudblog.withgoogle.com/products/ai-machine-learning/rss/'),
- ('LangChain','https://blog.langchain.com/rss.xml'),
- ('GitHub AI','https://github.blog/ai-and-ml/feed/'),
- ('Cloudflare AI','https://blog.cloudflare.com/tag/ai/rss/'),
+    (s['name'], s['url']) for s in SOURCE_REGISTRY
+    if s['name'] in AUDITED_FEED_NAMES and s['type'] in ('rss', 'atom')
 ]
+# 国内媒体只在国际来源不足时作为原有搜索渠道补位。
+
 def direct_feed_rows(max_age_hours=18):
     result = []
     ns = {'atom':'http://www.w3.org/2005/Atom'}
