@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Regression test: expand person-source discovery without accepting fabricated names.
+# Regression test: single-pass RSS collection and AI-focused figure selection.
