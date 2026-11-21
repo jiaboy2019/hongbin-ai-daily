@@ -104,14 +104,57 @@ def search(q, leader=False, international=False):
             if not (0 <= age <= (48 if leader else 18) * 3600): continue
         except (ValueError, TypeError, AttributeError):
             continue
-        description = tidy(x.findtext('description', ''))
+        raw_description = x.findtext('description', '') or ''
+        description = tidy(raw_description)
+        publisher_links = [html.unescape(u) for u in re.findall(r'href=["\\\'](https?://[^"\\\']+)', raw_description)]
+        publisher_links = [u for u in publisher_links if not (urllib.parse.urlparse(u).hostname or '').endswith(('google.com','google.cn'))]
         # Google News 的描述常为标题/相关新闻列表；仅在有独立文本时使用。
         if description.startswith(title): description = description[len(title):].strip(' -—:：')
         if len(description) < 24 or description.lower().startswith('view full coverage'): description = ''
-        row = {'title': title, 'source': source[:30], 'key': k, 'description': description}
+        row = {'title': title, 'source': source[:30], 'key': k, 'description': description, 'article_url': publisher_links[0] if publisher_links else ''}
         if k not in old and len(title) >= 10 and (leader or score(row) > 0) and not any(similar(title, p['title']) for p in state['items'][-100:]):
             rows.append(row)
     return rows
+
+def article_meta_summary(url):
+    # Fetch publisher page only; reject Google News redirects and untrusted URL schemes.
+    if not url or not url.startswith(('https://','http://')): return ''
+    host = urllib.parse.urlparse(url).hostname or ''
+    if host.endswith(('google.com','google.cn','googleusercontent.com')): return ''
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; HongbinDaily/1.0)'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            page = resp.read(350_000).decode('utf-8', 'ignore')
+        for pattern in (
+            r'<meta\\s+[^>]*property=["\\x27]og:description["\\x27][^>]*content=["\\x27]([^"\\x27]+)',
+            r'<meta\\s+[^>]*name=["\\x27]description["\\x27][^>]*content=["\\x27]([^"\\x27]+)',
+            r'<meta\\s+[^>]*content=["\\x27]([^"\\x27]+)["\\x27][^>]*(?:property=["\\x27]og:description|name=["\\x27]description)',
+        ):
+            m = re.search(pattern, page, re.I)
+            if m:
+                result = tidy(m.group(1))[:450]
+                if len(result) >= 30: return result
+    except Exception as exc:
+        print('原文摘要获取失败:', host, str(exc)[:65])
+    return ''
+
+
+def enrich_person_summaries(rows, identify_person):
+    # Do not manufacture facts from the headline; only use publisher-provided metadata.
+    attempts = 0
+    for row in sorted(rows, key=score, reverse=True):
+        if attempts >= 35: break
+        if not identify_person(row['title'])[0] or score(row)<8 or not editorial_eligible(row): continue
+        if valid_description(row): continue
+        url = row.get('article_url', '')
+        if not url: continue
+        attempts += 1
+        summary = article_meta_summary(url)
+        if summary:
+            candidate = dict(row, description=summary)
+            if valid_description(candidate): row['description'] = summary
+    print('人物原文摘要补采尝试:', attempts)
+
 
 def gather(queries, leader=False, international=False):
     rows, used = [], set()
@@ -170,7 +213,11 @@ def direct_feed_rows(max_age_hours=18):
                 if description.startswith(title): description = description[len(title):].strip(' -—:：')
                 if len(description) < 25: description = ''
                 description = description[:450]
-                row = {'title':title,'source':source,'key':norm(title),'description':description}
+                link = item.findtext('link') or item.findtext('atom:link', default='', namespaces=ns)
+                if not link:
+                    atom_link = item.find('atom:link', ns)
+                    if atom_link is not None: link = atom_link.attrib.get('href','')
+                row = {'title':title,'source':source,'key':norm(title),'description':description,'article_url':link}
                 if len(title)>=10 and row['key'] not in old and score(row)>0 and not any(similar(title,p['title']) for p in state['items'][-100:]):
                     result.append(row); count+=1
             print('独立源:',source,count)
@@ -317,6 +364,7 @@ def identify_person(title):
     return None, None
 def is_chinese_text(t):
     return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
+enrich_person_summaries(leader_rows, identify_person)
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
