@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test international-first sources and repaired complete-headline syntax.
+# Re-test after removing duplicated trailing Python source.
