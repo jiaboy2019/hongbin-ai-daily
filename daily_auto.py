@@ -354,7 +354,7 @@ news = new_selection
 
 # 成品发布前的最低质量门槛：禁止空栏目、重复标题摘要、可疑模型型号。
 # 未达标时工作流失败，不覆盖已发布的正式成品。
-UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\\.2', r'GPT-7(?:\\.\\d+)?', r'Claude\\s+6(?:\\.\\d+)?')
+UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\d+)?')
 def valid_summary(row):
     desc = tidy(row.get('description', ''))
     title = tidy(row['title'])
