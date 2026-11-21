@@ -19,7 +19,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；新增媒体独立RSS采集，失败自动跳过
+    # 使用固定母版进行完整出图验收；新增媒体RSS、中文翻译和人物动态修复，失败自动跳过
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
