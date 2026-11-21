@@ -499,7 +499,12 @@ def eligible_person_report(row):
     # 正规媒体报道直接作为候选，不再要求独立摘要、动词模板或重大突破评分。
     # 保留明确的高风险标题排除及AI相关性，避免虚构、广告和无关新闻。
     if not editorial_eligible(row): return False
-    if not relevant_ai_person_event(row['title'] + ' ' + row.get('description','')): return False
+    # The person must be central to a concrete AI event, not finance, entertainment or a roundup.
+    if not quality_gate(row): return False
+    low = row['title'].lower()
+    if any(x in low for x in ('crypto','xrp','ada ','bitcoin','token','poster','movie','film','marketing','trump','donat','acquisition','buyout','60,000','60000','丑闻','收购','海报','电影','捐款','加密货币','预测翻转')):
+        return False
+    if not relevant_ai_person_event(row['title']): return False
     if len(row.get('title','').strip()) < 9: return False
     if any(w in row['title'].lower() for w in ('博彩','竞猜','广告推广','sponsored content')): return False
     return True
@@ -633,7 +638,7 @@ def is_chinese_ready(row):
 def quality_gate(row):
     """Avoid weak syndicated sources and translation artifacts in published headlines."""
     source = row.get('source', '').lower()
-    if any(x in source for x in ('风闻','财富号','金十','tempo.co','techgig','www.itsdw','中华网')):
+    if any(x in source for x in ('风闻','财富号','金十','tempo.co','techgig','www.itsdw','中华网','万维读者','cryptonews','crypto briefing','biggo finance')):
         return False
     raw = row.get('title','').lower()
     if any(x in raw for x in ('vacation','resort','holiday','ipo','listed','million dollars','billion dollars','investor','fundraising','funding','market nervous','market jitters','math breakthrough','mathematical breakthrough')):
@@ -643,7 +648,7 @@ def quality_gate(row):
                                'price plunge','selloff','financial market')):
         return False
     chinese = to_chinese(row['title'])
-    if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想','度假村','度假','上市后','数学突破')):
+    if any(x in chinese for x in ('散户投资','人类贸易','股市','股价','铜价','金属市场','黎曼猜想','度假村','度假','上市后','数学突破','特朗普账户','捐款','美元资助','电影海报')):
         return False
     if not any(x in raw for x in ('ai','artificial intelligence','model','robot','agent','chip','openai','anthropic','deepmind','nvidia','gemini','deepseek','人工智能','模型','机器人','芯片','智能体')):
         return False
