@@ -185,6 +185,19 @@ DIRECT_FEEDS = [
  ('量子位','https://www.qbitai.com/feed'),
  ('机器之心','https://www.jiqizhixin.com/rss'),
  ('36氪','https://36kr.com/feed'),
+ # 扩展来源：新增真实媒体/研究机构的公开订阅地址，失效源自动跳过。
+ ('钛媒体','https://www.tmtpost.com/rss'),
+ ('InfoQ','https://www.infoq.cn/feed'),
+ ('IT之家','https://www.ithome.com/rss/'),
+ ('雷峰网','https://www.leiphone.com/feed'),
+ ('Engadget AI','https://www.engadget.com/category/ai/feed/'),
+ ('The Register','https://www.theregister.com/software/ai_ml/headlines.atom'),
+ ('Meta News','https://about.fb.com/news/feed/'),
+ ('Meta Engineering','https://engineering.fb.com/feed/'),
+ ('Google Cloud AI','https://cloudblog.withgoogle.com/products/ai-machine-learning/rss/'),
+ ('LangChain','https://blog.langchain.com/rss.xml'),
+ ('GitHub AI','https://github.blog/ai-and-ml/feed/'),
+ ('Cloudflare AI','https://blog.cloudflare.com/tag/ai/rss/'),
 ]
 def direct_feed_rows(max_age_hours=18):
     result = []
@@ -406,6 +419,22 @@ news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器�
 # 国际媒体独立采集，不能只使用中国区中文搜索。
 international_news = gather(['artificial intelligence breakthrough', 'OpenAI Google DeepMind Anthropic AI', 'AI robotics chips research', 'AI agents product launch', 'AI science technology'], international=True)
 news.extend(r for r in international_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
+# 不提供可靠公开 RSS 的权威媒体，按站点定向检索，仍严格执行18小时窗口。
+# 这只是补充发现渠道，不是限制新闻发布媒体的白名单。
+site_queries_cn = [
+    '人工智能 site:news.cn', 'AI site:people.com.cn',
+    '人工智能 site:chinanews.com.cn', 'AI site:huanqiu.com',
+    'AI site:jiqizhixin.com', '人工智能 site:qbitai.com',
+    '机器人 site:zhidx.com', 'AI site:36kr.com',
+]
+site_queries_en = [
+    'AI site:reuters.com/technology', 'AI site:bloomberg.com',
+    'artificial intelligence site:ft.com', 'AI site:techcrunch.com',
+    'AI site:technologyreview.com', 'AI site:venturebeat.com',
+    'AI site:spectrum.ieee.org',
+]
+site_news = gather(site_queries_cn) + gather(site_queries_en, international=True)
+news.extend(r for r in site_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 news.extend(r for r in direct_news if r['key'] not in {n['key'] for n in news} and r['key'] not in used)
 print('候选统计：普通新闻', len(news), '人物', len(leaders), '人物名单', leader_names)
 if len(news) < 4:
@@ -431,7 +460,7 @@ def is_chinese_ready(row):
 
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
-ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news + site_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
