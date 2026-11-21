@@ -339,9 +339,18 @@ def is_chinese_ready(row):
     t = to_chinese(row['title'])
     return len(re.findall('[一-鿿]', t)) >= 8 and len(re.findall(r'[A-Za-z]', t)) <= len(t)*0.55
 
+# 先筛真正具有独立事实信息的摘要，再按新闻价值评分；Google News 标题列表不能算摘要。
+def valid_description(row):
+    desc = tidy(row.get('description', ''))
+    title = tidy(row.get('title', ''))
+    if len(desc) < 25: return False
+    if title.lower() in desc.lower() or desc.lower() in title.lower(): return False
+    if re.search(r'(?:相关新闻|查看全部报道|View Full Coverage|Read more|阅读更多)', desc, re.I): return False
+    return True
+
 # 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
 # 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
-ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r)],key=score,reverse=True)
+ready_pool = sorted([r for r in news + domestic + direct_news + international_news if is_chinese_ready(r) and score(r)>0 and editorial_eligible(r) and valid_description(r)],key=lambda r: (valid_description(r), score(r)),reverse=True)
 new_selection = []
 for r in ready_pool:
     if r['key'] in {x['key'] for x in new_selection}: continue
@@ -363,13 +372,13 @@ UNVERIFIED_MODEL_PATTERNS = (r'GPT-6\.2', r'GPT-7(?:\.\d+)?', r'Claude\s+6(?:\.\
 def valid_summary(row):
     desc = tidy(row.get('description', ''))
     title = tidy(row['title'])
-    return len(desc) >= 25 and desc.lower() not in title.lower() and title.lower() not in desc.lower()
+    return valid_description(row)
 
 if len(leaders) != 3:
     # 失败时保留可审阅的候选报告，供人工补选真实人物报道。
     report = {
         'date': TODAY.isoformat(), 'status': 'needs_editorial_review',
-        'reason': f'科技人物仅{len(leaders)}/3条',
+        'reason': f'科技人物仅{len(leaders)}/3条；有效摘要新闻{len(ready_pool)}条',
         'selected_person_candidates_unverified': leaders,
         'person_search_candidates': [
             {'title': r['title'], 'source': r['source'],
