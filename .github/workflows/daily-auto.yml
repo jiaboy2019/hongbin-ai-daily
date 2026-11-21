@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Retest news summary diagnostics and suspicious story filters.
+# Retest recognized AI researchers and substantive-summary safeguards.
