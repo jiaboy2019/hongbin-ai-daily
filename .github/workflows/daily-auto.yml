@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Diagnose person-news rejection reasons before changing editorial rules again.
+# Test fact-based Chinese person headlines when RSS metadata lacks independent summaries.
