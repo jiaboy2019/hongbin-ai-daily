@@ -80,8 +80,7 @@ def gather(queries, leader=False):
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
 PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)'}
 
-def fetch_portrait(name):
-    title = PERSON_PAGES.get(name)
+def fetch_wiki_thumbnail(title):
     if not title: return None
     url = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + urllib.parse.quote(title)
     try:
@@ -99,8 +98,33 @@ def fetch_portrait(name):
         im.save(out, format='JPEG', quality=82)
         return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
     except Exception as exc:
-        print('人物照片下载失败:', name, exc)
+        print('百科配图下载失败:', title, exc)
         return None
+
+def fetch_portrait(name):
+    return fetch_wiki_thumbnail(PERSON_PAGES.get(name))
+
+# 只使用与新闻标题中明确出现的机构/产品对应的百科图片。
+# 这些是相关主体的示意配图，并非新闻现场照片；找不到时不以随机图片代替。
+NEWS_IMAGE_PAGES = [
+    ('OpenAI', 'OpenAI'), ('ChatGPT', 'ChatGPT'),
+    ('Gemini', 'Gemini_(chatbot)'), ('Google', 'Google'),
+    ('Meta', 'Meta_Platforms'), ('微软', 'Microsoft'),
+    ('Microsoft', 'Microsoft'), ('苹果', 'Apple_Inc.'),
+    ('Apple', 'Apple_Inc.'), ('英伟达', 'Nvidia'),
+    ('Nvidia', 'Nvidia'), ('AMD', 'Advanced_Micro_Devices'),
+    ('华为', 'Huawei'), ('特斯拉', 'Tesla,_Inc.'),
+    ('Tesla', 'Tesla,_Inc.'), ('百度', 'Baidu'),
+    ('阿里', 'Alibaba_Group'), ('腾讯', 'Tencent'),
+    ('小米', 'Xiaomi'), ('DeepSeek', 'DeepSeek'),
+    ('宇树', 'Unitree_Robotics'), ('Anthropic', 'Anthropic'),
+]
+def fetch_news_image(title):
+    for keyword, page in NEWS_IMAGE_PAGES:
+        if keyword.lower() in title.lower():
+            uri = fetch_wiki_thumbnail(page)
+            if uri: return uri, keyword
+    return None, None
 
 def clip(s, n):
     return s if len(s) <= n else s[:n-1] + '…'
@@ -186,6 +210,17 @@ with sync_playwright() as p:
     )
 
     page.evaluate('document.fonts.ready')
+    # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
+    news_image_count = 0
+    for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
+        uri, matched = fetch_news_image(row['title'])
+        if uri:
+            page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
+            print('新闻配图:', key, matched)
+            news_image_count += 1
+    print('成功加载新闻相关配图:', news_image_count, '/4')
+    if news_image_count != 4:
+        raise RuntimeError('新闻相关配图不足4张，停止导出，避免占位图或无关图片')
     # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
     portrait_count = 0
     for i, person in enumerate(leader_names):
