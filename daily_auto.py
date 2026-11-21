@@ -455,6 +455,26 @@ def eligible_person_report(row):
 def is_chinese_text(t):
     return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
 enrich_person_summaries(leader_rows, identify_person)
+# 记录人物候选在哪一道门槛被排除，便于定位真正瓶颈；不输出假新闻。
+person_rejections = {'no_name':0,'invalid_report':0,'not_chinese':0,'eligible':0}
+person_samples = []
+for candidate in leader_rows:
+    candidate_name, _ = identify_person(candidate['title'])
+    if not candidate_name:
+        reason='no_name'
+    elif not eligible_person_report(candidate):
+        reason='invalid_report'
+    elif not is_chinese_text(candidate['title']):
+        reason='not_chinese'
+    else:
+        reason='eligible'
+    person_rejections[reason] += 1
+    if reason == 'invalid_report' and len(person_samples) < 12:
+        person_samples.append({'name':candidate_name,'title':candidate['title'][:85],
+            'source':candidate.get('source',''), 'has_description':valid_description(candidate),
+            'score':score(candidate)})
+print('人物候选诊断:', json.dumps(person_rejections, ensure_ascii=False))
+print('人物被排除样本:', json.dumps(person_samples, ensure_ascii=False))
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
