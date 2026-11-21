@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test Python syntax first, then editorial summary and person-news checks.
+# Retest after removing duplicated trailing Python source.
