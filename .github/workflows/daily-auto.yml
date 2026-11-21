@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test explicitly tagged factual person briefs through final validation.
+# Test stricter AI-topic filtering after first successful end-to-end image build.
