@@ -393,6 +393,13 @@ def publishable_title(row, limit=22):
         return False
     if any(x in title for x in ('公布AI相关动态','发布AI新进展','高考','违规考生','数学问题','数学突破','价格已在网上泄露','完美风暴','预测翻转')):
         return False
+    # Reject slogans and unmatched quotation marks before they reach the poster.
+    if any(x in title for x in ('·生态共融','具身智创','AI教母','短板变成爆品','活力和雄心')):
+        return False
+    if title.count('“') != title.count('”') or title.count('「') != title.count('」'):
+        return False
+    if title.count('‘') != title.count('’'):
+        return False
     if title.startswith(('在“','在「','之后','关于')) or title.endswith(('之后','之前','推出','发布','宣布','称','表示','成功','突破','将','与','的')):
         return False
     return len(title) >= 8
