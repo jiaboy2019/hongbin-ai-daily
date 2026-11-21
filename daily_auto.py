@@ -57,7 +57,7 @@ def search(q):
         try:
             published = parsedate_to_datetime(x.findtext('pubDate', '')).astimezone(ZoneInfo('Asia/Shanghai'))
             age = (dt.datetime.now(ZoneInfo('Asia/Shanghai')) - published).total_seconds()
-            if not (0 <= age <= 36 * 3600): continue
+            if not (0 <= age <= 18 * 3600): continue
         except (ValueError, TypeError, AttributeError):
             continue
         row = {'title': title, 'source': source[:16], 'key': k}
@@ -113,7 +113,7 @@ people = [
 ]
 leaders, selected, leader_names = [], [], []
 for name, role in people:
-    found = [r for r in gather([name + ' 人工智能']) if name in r['title']]
+    found = [r for r in gather([name, name + ' AI', name + ' 科技']) if name in r['title']]
     if found:
         r = sorted(found, key=score, reverse=True)[0]
         leaders.append({'name': name + '｜' + role, 'title': clip(r['title'], 23), 'body': clip(r['title'], 45), 'source': r['source']})
@@ -123,9 +123,9 @@ for name, role in people:
         break
 
 used = {r['key'] for r in selected}
-news = [r for r in gather(['人工智能 最新 技术', 'AI 大模型 应用', 'AI 芯片 科技']) if r['key'] not in used]
+news = [r for r in gather(['人工智能', 'AI 模型', 'AI 新产品', '机器人', 'AI 芯片', '智能体', 'AI 科研突破', '大模型 发布', 'AI 应用 上线']) if r['key'] not in used]
 if len(news) < 4 or len(leaders) < 3:
-    raise RuntimeError('今日新闻不足以填满固定栏目，停止生成，避免发布占位内容')
+    raise RuntimeError(f'18小时窗口候选不足：新闻{len(news)}/4，人物{len(leaders)}/3。保持原模板和新闻标准，停止出图。')
 news = sorted(news, key=score, reverse=True)[:4]
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
