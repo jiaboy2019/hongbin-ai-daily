@@ -257,11 +257,14 @@ def identify_person(title):
     m = re.search(r'^([\\u4e00-\\u9fff]{2,4})[：称说表示认为谈]', title)
     if m: return m.group(1), '科技人物'
     return None, None
+def is_chinese_text(t):
+    return len(re.findall('[一-鿿]',to_chinese(t))) >= 5
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t')): continue
     if not any(w in r['title'].lower() for w in ('ai','artificial intelligence','model','robot','chip','agent','人工智能','模型','机器人','芯片','智能体','科研','发布','技术')): continue
+    if not is_chinese_text(r['title']): continue
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
@@ -270,7 +273,7 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names: continue
+        if not name or name in leader_names or not is_chinese_text(r['title']): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
@@ -300,11 +303,25 @@ news = chosen if len(chosen) == 4 else news[:4]
 # 翻译服务可能限流。优先选取已有中文标题的新闻，避免英文截断出现在朋友圈。
 def is_chinese_ready(row):
     t = to_chinese(row['title'])
-    return len(re.findall(r'[\\u4e00-\\u9fff]', t)) >= 6
-if not all(is_chinese_ready(r) for r in news):
-    ready = [r for r in news if is_chinese_ready(r)]
-    ready += [r for r in sorted(domestic+direct_news, key=score, reverse=True) if r not in ready and is_chinese_ready(r)]
-    news = ready[:4] if len(ready)>=4 else news
+    return len(re.findall('[一-鿿]', t)) >= 8 and len(re.findall(r'[A-Za-z]', t)) <= len(t)*0.55
+
+# 英文自动翻译受限时，绝不把未翻译的英文长标题刊登为中文新闻。
+# 从完整候选库补齐，兼顾国内、国际、不同媒体和不同事件。
+ready_pool = [r for r in news + sorted(domestic + direct_news + international_news, key=score, reverse=True) if is_chinese_ready(r)]
+new_selection = []
+for r in ready_pool:
+    if r['key'] in {x['key'] for x in new_selection}: continue
+    if any(similar(r['title'],x['title']) for x in new_selection): continue
+    if len(new_selection) < 3 and r['source'] in {x['source'] for x in new_selection}: continue
+    new_selection.append(r)
+    if len(new_selection)==4: break
+if len(new_selection)<4:
+    for r in ready_pool:
+        if r['key'] not in {x['key'] for x in new_selection} and not any(similar(r['title'],x['title']) for x in new_selection): new_selection.append(r)
+        if len(new_selection)==4: break
+if len(new_selection)<4:
+    raise RuntimeError('中文新闻不足4条：拒绝输出英文残缺标题，请检查新闻源与翻译服务')
+news = new_selection
 
 issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
 data = {
