@@ -19,7 +19,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；复测中文标题兜底、人物照片映射与人物新闻质量
+    # 使用固定母版进行完整出图验收；复测强制中文标题、媒体去重及新闻质量
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
