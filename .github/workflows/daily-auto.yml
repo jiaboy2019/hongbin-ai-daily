@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test expanded independent media feeds, site search, and editorial quality gates.
+# Regression test: reject false person names and untranslated English summaries.
