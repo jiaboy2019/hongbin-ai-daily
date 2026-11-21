@@ -378,7 +378,7 @@ people = [
 ]
 # 开放式人物候选：从新闻报道本身识别人名；上面的名单仅作补充，不是准入限制。
 leaders, selected, leader_names = [], [], []
-leader_queries = ['AI 科技 人物 表示', '人工智能 科学家 表示', '科技公司 CEO AI', '机器人 创始人 表示', 'AI 研究者 发布', '科技人物 人工智能']
+leader_queries = ['人工智能 教师 分享', 'AI 医生 应用 表示', 'AI 创业者 介绍', 'AI 工程师 研发', '人工智能 学者 观点', 'AI 设计师 创作', '机器人 创始人 表示', '大模型 产品负责人 介绍']
 # 直接 RSS 只抓取一次48小时窗口，再按新闻18小时过滤，避免重复请求30个源。
 leader_direct_news = direct_feed_rows(max_age_hours=48)
 direct_news = [r for r in leader_direct_news if r.get('age_hours', 999) <= 18]
@@ -412,10 +412,14 @@ def identify_person(title):
     for name, role in name_roles.items():
         if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
             return name, role
-    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁)[：\s]*([\u4e00-\u9fff]{2,4})(?:[：，称说表示认为谈]|\s)', title)
+    m = re.search(r'(?:科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁|工程师|教师|医生|设计师|创业者|开发者|学者|导演|作者|产品经理)[：\\s]*([\\u4e00-\\u9fff]{2,4})(?:[：，称说表示认为谈]|\\s)', title)
     # “CEO预测”“科学家表示”等标题不是姓名；拒绝把普通动词当人名。
     if m and m.group(1) not in ('预测','表示','认为','透露','宣布','发布','警告','指出','建议','回应','分析','称赞','谈论','介绍','发现','研究','专家','团队','未来','人工','智能','最新','全球','公司','行业'):
         return m.group(1), '科技人物'
+    # 允许新闻中“姓名+职务”的人物，职务作为识别依据，不猜测没有身份信息的姓名。
+    m2 = re.search(r'([\\u4e00-\\u9fff]{2,3})(?:教授|研究员|工程师|教师|医生|设计师|创业者|开发者|学者|CEO|创始人|负责人|总裁|董事长)[：，称说表示认为谈\\s]', title)
+    if m2 and m2.group(1) not in ('人工','智能','公司','行业','科技','全球','预测','专家','研究','产品','应用','未来','技术','最新'):
+        return m2.group(1), 'AI相关从业者'
     # 只凭标题开头的两个汉字无法可靠判断是人名，容易把“拷问”等动词当人物。
     # 未列入明确人物名单的名字，需要具备职务及姓名的上下文。
     return None, None
@@ -443,10 +447,10 @@ enrich_person_summaries(leader_rows, identify_person)
 for r in sorted(leader_rows, key=score, reverse=True):
     name, role = identify_person(r['title'])
     if not name or name in leader_names: continue
-    if score(r)<8 or not editorial_eligible(r) or not valid_description(r): continue
+    if score(r)<4 or not editorial_eligible(r) or not valid_description(r): continue
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
-    if not relevant_ai_person_event(r['title']): continue
-    if not is_chinese_text(r['title']) or not is_chinese_text(r.get('description','')): continue
+    if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
+    if not is_chinese_text(r['title']): continue
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
@@ -455,8 +459,8 @@ if len(leaders) < 3:
     extra = gather(['AI 创始人 表示', 'AI 科学家 发布', 'AI 公司 CEO 称', '人工智能 研究者 表示'], leader=True)
     for r in extra:
         name, role = identify_person(r['title'])
-        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<8 or not valid_description(r): continue
-        if not relevant_ai_person_event(r['title']): continue
+        if not name or name in leader_names or not is_chinese_text(r['title']) or not editorial_eligible(r) or score(r)<4 or not valid_description(r): continue
+        if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
