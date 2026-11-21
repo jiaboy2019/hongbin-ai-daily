@@ -63,4 +63,4 @@ jobs:
           git pull --rebase -X ours origin main
           git push
 
-# Test named AI researcher interviews and engineering discussion headline selection.
+# Test excluding multi-topic roundup headlines from person news.
