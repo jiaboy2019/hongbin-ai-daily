@@ -15,7 +15,7 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # 使用固定母版进行完整出图验收
+    # 使用固定母版进行完整出图验收；扩大科技人物搜索后复测
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
