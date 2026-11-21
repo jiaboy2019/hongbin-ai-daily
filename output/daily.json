@@ -2,48 +2,48 @@
   "issue": "004",
   "date": "2026-11-21",
   "headline": {
-    "title": "具身智创·生态共融",
-    "body": "具身智创·生态共融，2026人形机器人开发者大会将于11月25日举办- OSCHINA - 开源 × AI · 开发者生态社区。",
-    "source": "OSCHINA"
+    "title": "阿里云，开始赚AI的钱了",
+    "body": "阿里云，开始赚AI的钱了。",
+    "source": "钛媒体"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "机器人也要“实习",
-      "body": "机器人也要“实习”？探访香港首个具身智能国际应用训练场。",
-      "source": "中国新闻网"
+      "title": "AI算力供给承压",
+      "body": "AI算力供给承压：阿里云增速将放缓，但千亿美元营收目标不变。",
+      "source": "手机新浪网"
     },
     {
       "tag": "产品应用",
-      "title": "台州产缝制机器人省内首次入驻服装工厂",
-      "body": "“艾妮”上岗了！台州产缝制机器人省内首次入驻服装工厂。",
-      "source": "台州新闻"
+      "title": "比亚迪发布折叠方向盘",
+      "body": "比亚迪发布折叠方向盘：线控转向+具身机器人电机，10秒泊车折叠，首搭方程豹钛9。",
+      "source": "网通社"
     },
     {
       "tag": "前沿科技",
-      "title": "以场景驱动推进具身智能规模化落地",
-      "body": "以场景驱动推进具身智能规模化落地，具身智能机器人焊接训练场、江苏省机器人警察学院揭牌。",
-      "source": "紫牛新闻"
+      "title": "香港首设机器人训练中心 先模拟再职场实习",
+      "body": "香港首设机器人训练中心 先模拟再职场实习。",
+      "source": "8world"
     }
   ],
   "leaders": [
     {
-      "name": "Dario Amodei｜Anthropic CEO",
-      "title": "印度各地的活力和雄心令人难以置信",
-      "body": "“印度各地的活力和雄心令人难以置信”：Anthropic首席执行官Dario Amodei谈印度在人工智能领域的角色。",
-      "source": "DD News"
+      "name": "纳德拉｜微软CEO",
+      "title": "Outlook大崩溃后纳德拉再预警",
+      "body": "Outlook大崩溃后纳德拉再预警：AI将加剧基础设施不稳定性，催生更多宕机风险。",
+      "source": "ThePaper.cn"
     },
     {
-      "name": "Satya Nadella｜微软CEO",
-      "title": "接受人工智能购物代理",
-      "body": "微软首席执行官萨蒂亚·纳德拉警告称，接受人工智能购物代理，否则将失去客户，拱手让给竞争对手。",
-      "source": "Android Headlines"
+      "name": "阿莫迪｜Anthropic CEO",
+      "title": "阿莫迪：AI领路人-36氪",
+      "body": "阿莫迪：AI领路人-36氪。",
+      "source": "www.36kr.com"
     },
     {
-      "name": "李飞飞｜AI科学家",
-      "title": "AI教母李飞飞要把AMD苏姿丰的短板变成爆品",
-      "body": "七十人，82亿美元！AI教母李飞飞要把AMD苏姿丰的短板变成爆品。",
-      "source": "手机新浪网"
+      "name": "Sam Altman｜OpenAI CEO",
+      "title": "人工智能是否会具备意识",
+      "body": "人工智能是否会具备意识？它能变好吗？Sam Altman、Ray Kurzweil等人对奇点的看法。",
+      "source": "Fortune"
     }
   ]
 }
