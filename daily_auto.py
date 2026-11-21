@@ -447,7 +447,13 @@ def relevant_ai_person_event(title):
 
 def eligible_person_report(row):
     # 人物动态不沿用“重大科技突破”的高分门槛；但仍须是可信的AI相关报道。
-    if not editorial_eligible(row) or not valid_description(row): return False
+    if not editorial_eligible(row): return False
+    # 人物栏目允许从有明确事实的中文标题提炼简讯；不能因为 Google News
+    # RSS 未附独立摘要就丢弃整条真实报道。
+    if not valid_description(row):
+        title = row.get('title','')
+        if len(re.findall('[一-鿿]', title)) < 14: return False
+        if not any(w in title for w in ('表示','称','认为','指出','介绍','发布','推出','分享','宣布','谈','透露','展示','呼吁','建议','解释','回应','预测','完成','开发','应用','使用','开源','研究')): return False
     if score(row) == -100: return False
     if not relevant_ai_person_event(row['title'] + ' ' + row.get('description','')): return False
     return True
@@ -482,6 +488,9 @@ for r in sorted(leader_rows, key=score, reverse=True):
     if any(w in r['title'].lower() for w in ('stock','stocks','shares','market selloff','股价','股票','道歉','apology','jeff bezos','didn’t','didn\u2019t','科技早报','或将','传闻')): continue
     if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
     if not is_chinese_text(r['title']): continue
+    # 仅标题可核验时，以标题事实形成简讯，不冒充原文独立摘要。
+    if not valid_description(r):
+        r = dict(r, description='据'+r['source']+'报道：'+r['title']+'。')
     leaders.append({'name': name + '｜' + role, 'title': clip(to_chinese(r['title']), 23), 'body': article_body(r, 60), 'source': r['source']})
     selected.append(r); leader_names.append(name)
     if len(leaders) == 3: break
@@ -492,6 +501,8 @@ if len(leaders) < 3:
         name, role = identify_person(r['title'])
         if not name or name in leader_names or not is_chinese_text(r['title']) or not eligible_person_report(r): continue
         if not relevant_ai_person_event(r['title'] + ' ' + r.get('description','')): continue
+        if not valid_description(r):
+            r = dict(r, description='据'+r['source']+'报道：'+r['title']+'。')
         leaders.append({'name':name+'｜'+role,'title':clip(r['title'],23),'body':article_body(r,60),'source':r['source']})
         selected.append(r); leader_names.append(name)
         if len(leaders)==3: break
