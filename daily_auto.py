@@ -130,7 +130,7 @@ people = [
     ('Andrew Ng', 'AI教育与研究者'), ('François Chollet', 'AI研究者'),
 ]
 # 人物动态必须有可归属的科技信息；媒体标题仅提到姓名不足以入选。
-LEADER_BLOCK = ('离职', '离任', '辞任', '辞职', '去世', '逝世', '遇刺', '被捕', '间谍', '战争', '导弹', '政治通牒', '爆料', '首谈', '传闻', '谣言', '阴谋', '曝', '被曝', '震惊', '特朗普', '股价', '股市', '投资机会', '官司', '起诉')
+LEADER_BLOCK = ('离职', '离任', '辞任', '辞职', '去世', '逝世', '遇刺', '被捕', '间谍', '战争', '导弹', '政治通牒', '爆料', '首谈', '传闻', '谣言', '阴谋', '曝', '被曝', '震惊', '特朗普', '股价', '股市', '投资机会', '官司', '起诉', '拟募资', '再创业', '神话破裂', '行业又要变天', '或将', '据传', '网曝', '疑似')
 LEADER_TECH = ('人工智能', 'AI', '模型', '机器人', '芯片', '科研', '研究', '论文', '技术', '智能体', '算法', '开源', '发布', '产品', '编程', '算力', '计算', '自动驾驶', '世界模型', '具身智能', 'agent')
 LEADER_BAD_SOURCES = ('禁闻', '搜狐', 'sohu', '驱动之家', 'x', 'twitter', '东方财富', '股吧', '自媒体')
 def leader_valid(row):
@@ -194,8 +194,12 @@ with sync_playwright() as p:
             page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
             portrait_count += 1
     print('成功加载人物照片:', portrait_count, '/', len(leader_names))
+    if portrait_count != 3:
+        raise RuntimeError('人物照片未全部加载，停止导出，避免生成占位图')
     page.wait_for_timeout(800)
     error = page.locator('#errors').inner_text()
+    if not page.evaluate('globe.complete && globe.naturalWidth > 0'):
+        raise RuntimeError('原版地球图标加载失败，停止导出')
     if error.strip():
         raise RuntimeError('模板文字溢出：' + error)
     png = page.locator('#poster').evaluate('(c) => c.toDataURL("image/png").split(",")[1]')
