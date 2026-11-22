@@ -1,5 +1,5 @@
 {
-  "last_issue": 4,
+  "last_issue": 5,
   "items": [
     {
       "key": "2d093e89461704ab14bd",
@@ -1185,6 +1185,41 @@
       "key": "a217f9687f24abb2cf14",
       "title": "Satya Nadella warns AI replacing labor risks democracy",
       "date": "2026-11-21"
+    },
+    {
+      "key": "cebfcbb877ea6e1c5caf",
+      "title": "V4全系列模型上线后，DeepSeek Harness开发者预览版开放测试",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "c682746de1c4e79cd61a",
+      "title": "OpenAI推出ChatGPT钱包 联合美运通等打造AI支付功能",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "a5aea63a57350b222156",
+      "title": "全球首场人形机器人拳击金腰带争霸赛在雄安上演",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "89da1e03de8181261cd2",
+      "title": "DeepSeek开始限额了，这里是一份最全“搬家”手册",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "6b3eccec937ce85e2ba6",
+      "title": "Nvidia after Jensen Huang: Can the AI chip giant keep its lead without its founder?",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "5f1599fcef7cf1ac9daa",
+      "title": "Anthropic CEO Dario Amodei says company will not bow to political pressure on AI safety",
+      "date": "2026-11-22"
+    },
+    {
+      "key": "4cfcc47dd97fe0d245f2",
+      "title": "苏姿丰称AI是50年一遇代际技术变革",
+      "date": "2026-11-22"
     }
   ]
 }

@@ -1,49 +1,49 @@
 {
-  "issue": "004",
-  "date": "2026-11-21",
+  "issue": "005",
+  "date": "2026-11-22",
   "headline": {
-    "title": "面对人工智能数据中心创纪录的排放量",
-    "body": "面对人工智能数据中心创纪录的排放量，Meta重新考虑2030年净零排放目标。",
-    "source": "Ars Technica"
+    "title": "V4全系列模型上线后",
+    "body": "V4全系列模型上线后，DeepSeek Harness开发者预览版开放测试。",
+    "source": "财联社"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "人工智能如何迫使中国重塑产业政策",
-      "body": "人工智能如何迫使中国重塑产业政策。",
-      "source": "Bloomberg.com"
+      "title": "OpenAI推出ChatGPT钱包",
+      "body": "OpenAI推出ChatGPT钱包，与美国运通等合作打造人工智能支付功能。",
+      "source": "微博"
     },
     {
       "tag": "产品应用",
-      "title": "国产大模型引领全球开源生态",
-      "body": "国产大模型引领全球开源生态，累计下载量突破100亿次。",
-      "source": "手机新浪网"
+      "title": "全球首场人形机器人拳击金腰带争霸赛在雄安上演",
+      "body": "全球首场人形机器人拳击金腰带争霸赛在雄安上演。",
+      "source": "环球网"
     },
     {
       "tag": "前沿科技",
-      "title": "AI智能推荐与沉浸式直播成口碑双核",
-      "body": "m6米乐app在线登陆官网新版上线首月热度攀升：AI智能推荐与沉浸式直播成口碑双核。",
-      "source": "iheima"
+      "title": "DeepSeek开始限额了",
+      "body": "DeepSeek开始限额了，这里是一份最全“搬家”手册。",
+      "source": "36氪"
     }
   ],
   "leaders": [
     {
-      "name": "姚顺雨｜腾讯混元首席AI科学家",
-      "title": "腾讯姚顺雨重返清华姚班",
-      "body": "腾讯姚顺雨重返清华姚班：聊大模型不靠“赛马”拼指标，RSI要落到具体工程。",
-      "source": "36氪"
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "黄仁勋之后的英伟达",
+      "body": "黄仁勋之后的英伟达：这家AI芯片巨头能否在没有创始人的情况下保持领先地位。",
+      "source": "DQ"
     },
     {
-      "name": "Sam Altman｜OpenAI CEO",
-      "title": "我不会让我的孩子变成拉布拉多犬",
-      "body": "“我不会让我的孩子变成拉布拉多犬”：萨姆·阿尔特曼回击马斯克的AI警告。",
-      "source": "Analytics Insight"
+      "name": "Dario Amodei｜Anthropic CEO",
+      "title": "公司不会屈服于有关人工智能安全的政治压力",
+      "body": "Anthropic首席执行官Dario Amodei表示，公司不会屈服于有关人工智能安全的政治压力。",
+      "source": "Firstpost"
     },
     {
-      "name": "Satya Nadella｜微软CEO",
-      "title": "人工智能取代劳动力会危及民主",
-      "body": "萨蒂亚·纳德拉警告称，人工智能取代劳动力会危及民主。",
-      "source": "TechGig"
+      "name": "苏姿丰｜AMD CEO",
+      "title": "苏姿丰称AI是50年一遇代际技术变革",
+      "body": "苏姿丰称AI是50年一遇代际技术变革。",
+      "source": "手机新浪网"
     }
   ]
 }
