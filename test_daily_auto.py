@@ -11,6 +11,23 @@ import daily_auto as daily
 
 class EditorialTests(unittest.TestCase):
 
+    def test_headline_priority_uses_unique_media_position_and_hot_topic(self):
+        title = 'OpenAI 发布 GPT-6.2 模型'
+        def report(url, source, **signals):
+            return dict(daily.candidate(title, url, '2026-11-21T10:00:00Z', '', 'test'),
+                        source=source, category='tech', **signals)
+        original = report('https://openai.com/index/release', '媒体甲')
+        repeated = report('https://openai.com/index/release-2', '媒体甲')
+        featured = report('https://openai.com/index/release-3', '媒体乙', publisher_position=2,
+                          hot_topic={'rank': 2, 'participantCount': 40})
+        baseline = daily.headline_priority(original, [original])
+        self.assertEqual(daily.headline_priority(original, [original, repeated]), baseline)
+        ranked = daily.headline_priority(original, [original, repeated, featured])
+        self.assertEqual(ranked['media'], ['媒体乙', '媒体甲'])
+        self.assertEqual(ranked['best_media_position'], 2)
+        self.assertEqual(ranked['aihot']['rank'], 2)
+        self.assertGreater(ranked['score'], baseline['score'])
+
     def test_media_report_can_select_unregistered_person(self):
         as_of = daily.parse_date('2026-11-24T08:32:04+08:00')
         url = 'https://www.ithome.com/1/031/999.htm'

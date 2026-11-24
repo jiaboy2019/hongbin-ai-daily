@@ -325,12 +325,13 @@ def web_source(source, url=None):
     if not links:
         return [], 0
     rows = []
-    for link in list(links.values())[:6]:
+    for position, link in enumerate(list(links.values())[:6], start=1):
         metadata = publisher_article(link)
         if metadata:
             title, date, description = metadata[:3]
             row = candidate(title, link, date, description, 'web')
             if row and in_window(row, PERSON_FALLBACK_HOURS):
+                row['publisher_position'] = position
                 rows.append(row)
     return rows, len(links)
 
@@ -431,6 +432,39 @@ def aihot_candidates():
         'valid_18h': sum(in_window(row, NEWS_HOURS) for row in rows.values()),
         'valid_person_window': len(rows),
     }
+
+
+def aihot_hot_topics():
+    endpoint = DISCOVERY['AIHOT']['url']
+    try:
+        items = json.loads(fetch(urllib.parse.urljoin(endpoint, '/api/v1/hot-topics'))).get('items', [])
+    except (OSError, ValueError, AttributeError):
+        return {}
+    if not isinstance(items, list):
+        return {}
+    topics = [item for item in items[:10] if isinstance(item, dict) and type(item.get('rank')) is int
+              and 1 <= item['rank'] <= 10 and (when := parse_date(item.get('latestAt'))) and when <= NOW]
+
+    def topic_links(topic):
+        links = [topic.get('links') or {}]
+        public_id = topic.get('storyPublicId', '')
+        if isinstance(public_id, str) and re.fullmatch(r'[0-9a-f-]{36}', public_id):
+            url = urllib.parse.urljoin(endpoint, '/api/v1/stories/' + public_id)
+            try:
+                story = json.loads(fetch(url, timeout=5))['story']
+                links.extend(report.get('links') or {} for report in story.get('reports', [])
+                             if isinstance(report, dict))
+            except (OSError, ValueError, KeyError, AttributeError, TypeError):
+                pass
+        return topic, {canonical_url(link.get('original')) for link in links if isinstance(link, dict)} - {''}
+
+    result = {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        for topic, links in pool.map(topic_links, sorted(topics, key=lambda item: item['rank'])):
+            for link in links:
+                result.setdefault(link, {key: topic[key] for key in ('rank', 'participantCount', 'sourceCount')
+                                         if type(topic.get(key)) is int and topic[key] >= 0})
+    return result
 
 
 
@@ -1157,18 +1191,46 @@ def pick_people(rows, history, people_cards, selected, names):
         names.append(name)
 
 
-def choose_news(rows, history, people_rows):
-    selected, cards = [], []
+def headline_priority(row, coverage):
+    topic_rank = row.get('hot_topic', {}).get('rank')
+    related = [other for other in coverage
+               if (topic_rank and other.get('hot_topic', {}).get('rank') == topic_rank)
+               or duplicate_event(row, other) or duplicate_event(other, row)]
+    media = {other['source'] for other in related if other['category'] in {'tech', 'general'}}
+    positions = [other['publisher_position'] for other in related
+                 if other.get('publisher_position') and other['category'] in {'tech', 'general'}]
+    hot = min((other['hot_topic'] for other in related if other.get('hot_topic')),
+              key=lambda topic: topic['rank'], default={})
+    text = row['title'] + ' ' + row.get('description', '')
+    events = event_profile(text)
+    importance = (14 * bool('release' in events and model_tokens(row['title']))
+                  + 9 * bool('research' in events and re.search(r'\d|突破|开源', text))
+                  + 9 * bool('hardware' in events or 'deployment' in events)
+                  + 8 * bool('impact' in events or PRACTICAL_IMPACT.search(text)))
+    position_points = max(0, 7 - min(positions)) if positions else 0
+    hot_points = (12 - hot['rank']) * 2 + min(8, hot.get('participantCount', 0) // 8) if hot else 0
+    total = round(editorial_rank(row) / 4 + importance + min(24, 6 * len(media)) + position_points + hot_points, 2)
+    return {'score': total, 'importance_points': importance, 'media': sorted(media),
+            'best_media_position': min(positions, default=None), 'aihot': hot}
+
+
+def choose_news(rows, history, people_rows, *, limit=4, lead=None):
+    cards, selected = lead if lead else ([], [])
+    cards, selected = list(cards), list(selected)
     eligible = [r for r in rows if in_window(r, NEWS_HOURS) and not blocked(r)
                 and relevant_ai_news(r) and quality_gate(r) and event_profile(r['title'])]
+    coverage = [r for r in rows if in_window(r, NEWS_HOURS)]
+    if not selected:
+        headline_rows = [dict(row, headline_signals=headline_priority(row, coverage)) for row in eligible]
+        headline_rows.sort(key=lambda row: row['headline_signals']['score'], reverse=True)
     # Reserve one slot for each region when publishable, then prefer different publishers.
     for index in range(9):
-        if len(selected) == 4:
+        if len(selected) >= limit:
             break
         region = ({'CN': 'international', 'international': 'CN'}[selected[0]['region']]
                   if index == 1 and len(selected) == 1 else None)
         distinct = index < 5
-        for row in eligible:
+        for row in eligible if selected else headline_rows:
             if region and row['region'] != region:
                 continue
             if distinct and row['source'] in {item['source'] for item in selected}:
@@ -1196,6 +1258,8 @@ def choose_news(rows, history, people_rows):
                 'category': row['category'], 'publisher': row['source'],
                 'published_at_beijing': row['published_at_beijing'],
             })
+            if not selected:
+                cards[-1]['headline_signals'] = row['headline_signals']
             selected.append(row)
             break
     return cards, selected
@@ -1237,6 +1301,7 @@ def collect():
     with ThreadPoolExecutor(max_workers=16) as pool:
         jobs = {source['name']: pool.submit(collect_publisher, source) for source in PUBLISHERS}
         jobs['AIHOT'] = pool.submit(aihot_candidates)
+        hot_topics = pool.submit(aihot_hot_topics)
         jobs['Hacker News'] = pool.submit(hacker_news)
         jobs['GitHub Trending'] = pool.submit(github_trending)
         searches = [(q[0], pool.submit(search, *q)) for q in queries]
@@ -1281,10 +1346,15 @@ def collect():
                 'selected_news': 0, 'selected_people': 0,
             }
             rows.extend(dict(row, ingest_source=name) for row in eligible)
+        hot_signals = hot_topics.result()
     ranked = sorted(rows, key=editorial_rank, reverse=True)
     by_url = {}
     for row in ranked:
         current = by_url.setdefault(row['canonical_url'], row)
+        if row.get('publisher_position'):
+            current['publisher_position'] = min(row['publisher_position'], current.get('publisher_position', row['publisher_position']))
+        if row['canonical_url'] in hot_signals:
+            current['hot_topic'] = hot_signals[row['canonical_url']]
         current.setdefault('discovered_by', [])
         if row['ingest_source'] not in current['discovered_by']:
             current['discovered_by'].append(row['ingest_source'])
@@ -1337,8 +1407,9 @@ def main():
     out.mkdir(exist_ok=True)
     rows, stats = collect()
     eligible_history = [row for row in rows if not any(duplicate_event(row, old) for old in history)]
-    people_cards, people_rows, _ = choose_people(eligible_history, history)
-    news_cards, news_rows = choose_news(eligible_history, [], people_rows)
+    lead = choose_news(eligible_history, [], [], limit=1)
+    people_cards, people_rows, _ = choose_people(eligible_history, history + lead[1])
+    news_cards, news_rows = choose_news(eligible_history, [], people_rows, lead=lead)
     problems = final_problems(news_cards, people_cards)
     selected = news_rows + people_rows
     for field, chosen in [('selected_news', news_rows), ('selected_people', people_rows)]:

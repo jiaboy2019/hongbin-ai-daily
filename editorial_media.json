@@ -115,6 +115,15 @@
   ],
   "articles": [
     {
+      "article": "https://the-decoder.com/z-ai-follows-openai-into-loop-transformer-territory-with-its-new-750b-flagship-model/",
+      "images": [
+        {
+          "url": "https://z-ai-bj.oss-cn-beijing.aliyuncs.com/prompts-rich-media-resources/5.4-blog/20261123-173242.jpeg",
+          "evidence": "https://z.ai/blog/glm-5.4"
+        }
+      ]
+    },
+    {
       "article": "https://www.ithome.com/1/031/257.htm",
       "images": [
         {
