@@ -523,19 +523,23 @@ def article_images(url):
 
 
 def media_candidates(card, person):
+    portraits = []
     if person:
         profile = verified_person(person)
-        return profile.get('images', []) if profile else []
+        if profile:
+            portraits = [dict(image, kind='portrait') for image in profile.get('images', [])]
     url = card.get('article_url') or card.get('url', '')
+    if not url:
+        return portraits
     for entry in MEDIA['articles']:
         if canonical_url(entry['article']) == canonical_url(url):
-            return entry['images'] + article_images(url)
-    return article_images(url)
+            return portraits + [dict(image, kind='article_image') for image in entry['images'] + article_images(url)]
+    return portraits + [dict(image, kind='article_image') for image in article_images(url)]
 
 
 def prepare_images(news, leaders):
     slots = list(zip(('headline', 'u0', 'u1', 'u2'), news, [''] * 4))
-    slots += [(f'l{i}', {}, name) for i, name in enumerate(leaders)]
+    slots += [(f'l{i}', card, card['person']) for i, card in enumerate(leaders)]
     ready, evidence, hashes = {}, {}, set()
     with ThreadPoolExecutor(max_workers=7) as pool:
         references = [(slot, card, person, pool.submit(media_candidates, card, person)) for slot, card, person in slots]
@@ -729,17 +733,24 @@ def identify_person(title):
     # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
     title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
     title = re.sub(r'_[^\s]*新浪新闻.*$', '', title)
-    for name, role in name_roles.items():
-        if re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I):
-            return name, role
-    role_pattern = r'科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁|工程师'
-    speech = r'表示|指出|介绍|发布|分享|宣布|展示|：'
-    match = re.search(rf'(?P<role>{role_pattern})\s*(?P<name>[\u4e00-\u9fff]{{2,3}})(?={speech})', title)
+    role_pattern = r'首席科学家|科学家|创始人|CEO|首席执行官|研究员|教授|董事长|负责人|总裁|工程师'
+    english_role = r'CEO|chief executive(?: officer)?|chief scientist|(?:co-)?founder|professor|researcher|engineer'
+    for name in name_roles:
+        match = re.search(r'(?<![A-Za-z])' + re.escape(name) + r'(?![A-Za-z])', title, re.I)
+        if match:
+            prefix = title[:match.start()]
+            role = re.search(rf'(?:{role_pattern}|{english_role})\s*$', prefix, re.I)
+            return name, role.group().strip() if role else ''
+    speech = r'表示|指出|介绍|发布|分享|宣布|展示|谈|回应|获任|离任|[:：，、,。]|$'
+    match = re.search(rf'(?P<role>{role_pattern})\s*(?P<name>[\u4e00-\u9fff]{{2,3}})(?=\s*(?:{speech}))', title)
     if match:
         name = match['name']
         common_surnames = '赵钱孙李周吴郑王冯陈蒋沈韩杨朱秦许何吕张孔曹严华金魏陶姜谢邹苏潘葛范彭袁柳唐薛雷贺罗郝马苗凤方任俞柳史韦贾路江郭林钟徐邱骆高蔡田叶胡刘黄杜梁宋郑夏汪傅顾孟白熊阮邵崔程陆石侯邓洪龚'
         if name[0] in common_surnames:
             return name, match['role']
+    match = re.search(rf'\b(?P<role>(?i:{english_role}))\s+(?P<name>[A-Z][a-z]+(?:[ -][A-Z][a-z]+){{1,2}})\b', title)
+    if match:
+        return match['name'], match['role']
     return None, None
 
 
@@ -1105,11 +1116,12 @@ def pick_reviewed_people(history, cards, selected, names, hours):
 def person_card(row, profile, title, body):
     stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
     return {
-        'name': profile['name'] + '｜' + profile['role'], 'title': title, 'body': body,
+        'name': '｜'.join(part for part in (profile['name'], profile.get('role')) if part),
+        'title': title, 'body': body,
         'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
         'url': row['article_url'], 'discovered_via': row['discovered_via'],
         'category': 'person', 'publisher': row['source'],
-        'person': profile['name'], 'role_source': profile['role_source'],
+        'person': profile['name'],
         'published_at_beijing': row['published_at_beijing'],
     }
 
@@ -1118,39 +1130,28 @@ def pick_people(rows, history, people_cards, selected, names):
     for row in rows:
         if len(selected) >= 3:
             break
+        lead = re.split(r'(?<=[。！？])|(?<=[.!?])\s+', row.get('description', ''), maxsplit=1)[0]
         name, role = identify_person(row['title'])
-        story = row
-        if not name or not PERSON_ACTION.search(row['title']):
-            lead = re.split(r'(?<=[。！？])|(?<=[.!?])\s+', row['description'], maxsplit=1)[0]
-            lead_name, lead_role = identify_person(lead)
-            if lead_name in name_roles and PERSON_ACTION.search(lead):
-                name, role = lead_name, lead_role
-                story = {**row, 'title': lead}
-        subject = story['title'].casefold().find(name.casefold()) if name else -1
-        action = PERSON_ACTION.search(story['title'], subject + len(name)) if subject >= 0 else None
-        if (not name or not action or subject < 0 or action.start() - subject > len(name) + 20
-                or person_key(name) in {person_key(n) for n in names}
-                or blocked(row) or not eligible_person_report(story)
-                or not person_specific_story(story, name) or not PERSON_ACTION.search(story['title'])
+        if not name:
+            name, role = identify_person(lead)
+        if (not name or person_key(name) in {person_key(n) for n in names}
+                or not publisher_for(row['article_url']) or blocked(row)
+                or not relevant_ai_person_event(row['title'] + ' ' + lead)
                 or any(duplicate_event(row, other) for other in history + selected)):
             continue
-        row = enrich(row)
-        if blocked(row):
-            continue
-        profile = verified_person(name)
-        if not profile or not person_action_event(story['title'], row['description']):
-            continue
-        name, role = profile['name'], profile['role']
-        headline = short_headline(story['title'], 23)
-        if not (is_chinese_text(story['title']) and publishable_title(story, 23)
-                and PERSON_ACTION.search(headline)):
+        approved = reviewed_person_event(row['article_url'])
+        if approved and person_key(approved[0]['name']) == person_key(name):
+            event = approved[1]
+            headline, body = event['title'], event['body']
+        else:
             headline = short_headline(row['title'], 23)
-            if not (story is not row and is_chinese_text(row['title'])
-                    and publishable_title(row, 23) and event_profile(headline)):
-                continue
-        body = news_summary(row, 35, 55, headline)
+            if headline == '人工智能领域出现新进展' or headline.endswith(('发布AI新进展', '公布AI相关动态')):
+                published_title = clean_attribution(to_chinese(row['title'])).rstrip('。！？.!?')
+                headline = complete_excerpt(published_title, 25) or headline
+            body = news_summary(row, 35, 55, headline)
         if not body:
-            continue
+            body = article_body(row, 45)
+        profile = {'name': name, 'role': role}
         people_cards.append(person_card(row, profile, headline, body))
         selected.append(row)
         names.append(name)
@@ -1299,10 +1300,8 @@ def final_problems(news_cards, people_cards):
     if len(news_cards) != 4 or len(people_cards) != 3:
         problems.append(f'栏目数量不足：新闻 {len(news_cards)}/4，人物 {len(people_cards)}/3')
     for card in people_cards:
-        profile = verified_person(card.get('person', ''))
-        if (not profile or card.get('name') != profile['name'] + '｜' + profile['role']
-                or card.get('role_source') != profile['role_source']):
-            problems.append(f'科技人物身份或职务证据不足：{card.get("name", card.get("title"))}')
+        if not card.get('person'):
+            problems.append(f'报道未识别出人物姓名：{card.get("title")}')
     for card, hours in [(c, NEWS_HOURS) for c in news_cards] + [(c, PERSON_FALLBACK_HOURS) for c in people_cards]:
         if not all(card.get(key) for key in ('title', 'body', 'source', 'url', 'published_at')):
             problems.append(f'缺少标题、正文或溯源字段：{card.get("title")}')
@@ -1338,7 +1337,7 @@ def main():
     out.mkdir(exist_ok=True)
     rows, stats = collect()
     eligible_history = [row for row in rows if not any(duplicate_event(row, old) for old in history)]
-    people_cards, people_rows, names = choose_people(eligible_history, history)
+    people_cards, people_rows, _ = choose_people(eligible_history, history)
     news_cards, news_rows = choose_news(eligible_history, [], people_rows)
     problems = final_problems(news_cards, people_cards)
     selected = news_rows + people_rows
@@ -1364,18 +1363,12 @@ def main():
             row for row in eligible_history if in_window(row, PERSON_FALLBACK_HOURS)
             and identify_person(row['title'] + ' ' + row['description'])[0]
         ][:40],
-        'unverified_people': [
-            {'article': row['article_url'], 'name': name}
-            for row in eligible_history if in_window(row, PERSON_FALLBACK_HOURS)
-            and (name := identify_person(row['title'] + ' ' + row['description'])[0])
-            and not verified_person(name)
-        ][:40],
         'candidates': eligible_history[:40], 'problems': problems,
     }
     print(json.dumps({key: report[key] for key in ('date', 'unique_candidates', 'history_rejected', 'problems')},
                      ensure_ascii=False))
     print('AIHOT:', json.dumps(stats['AIHOT'], ensure_ascii=False))
-    assets, media_report = prepare_images(news_rows, names)
+    assets, media_report = prepare_images(news_rows, people_cards)
     report['images'] = media_report
     if any(slot['status'] == 'pending' for slot in media_report['slots'].values()):
         problems.append('存在图片待处理的候选')

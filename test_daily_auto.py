@@ -11,6 +11,22 @@ import daily_auto as daily
 
 class EditorialTests(unittest.TestCase):
 
+    def test_media_report_can_select_unregistered_person(self):
+        as_of = daily.parse_date('2026-11-24T08:32:04+08:00')
+        url = 'https://www.ithome.com/1/031/999.htm'
+        with (patch.object(daily, 'NOW', as_of),
+              patch.object(daily, 'MEDIA', {'people': [], 'articles': []}),
+              patch.object(daily, 'publisher_article', return_value=None)):
+            row = daily.candidate('研究员李海谈机器人新应用', url, '2026-11-24T00:00:00Z',
+                                  '新型机器人开始在仓库搬运物品。研究团队公布了首轮现场测试结果。', 'test')
+            cards, selected, names = daily.choose_people([row], [])
+            self.assertEqual(names, ['李海'])
+            self.assertEqual(selected, [row])
+            self.assertEqual(cards[0]['url'], url)
+            self.assertEqual(daily.final_problems([], cards), ['栏目数量不足：新闻 0/4，人物 1/3'])
+            with patch.object(daily, 'article_images', return_value=[{'url': 'https://img.ithome.com/person.jpg'}]):
+                self.assertEqual(daily.media_candidates(cards[0], '李海')[0]['kind'], 'article_image')
+
     def test_reviewed_people_replay_expiry_and_history(self):
         as_of = daily.parse_date('2026-11-24T08:32:04+08:00')
         with patch.object(daily, 'NOW', as_of):
