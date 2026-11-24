@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent
 BEIJING = dt.timezone(dt.timedelta(hours=8))
 NEWS_HOURS = 18
 PERSON_HOURS = 48
+PERSON_FALLBACK_HOURS = 96
+ISSUE_START_DATE = dt.date(2026, 11, 23)
 NOW = dt.datetime.now(dt.timezone.utc)
 HISTORY = ROOT / 'published_history.json'
 
@@ -109,7 +111,7 @@ def search(q, leader=False, international=False):
         link = next((u for u in links if publisher_host and domain_matches(host(u), publisher_host)), '')
         meta = publisher_article(link) if link else None
         row = candidate(meta[0], link, meta[1], meta[2], 'Google News') if meta else None
-        if row and in_window(row, PERSON_HOURS if leader else NEWS_HOURS):
+        if row and in_window(row, PERSON_FALLBACK_HOURS if leader else NEWS_HOURS):
             rows.append(row)
     return rows, len(entries)
 
@@ -238,6 +240,8 @@ def publisher_for(url):
         domains = [domain, *source.get('domain_aliases', [])]
         if any(expected and domain_matches(hostname, expected) for expected in domains) and (not prefix or path.startswith(prefix)):
             return source
+    if approved := reviewed_person_event(url):
+        return {'name': approved[1]['source'], 'category': 'official'}
     return None
 
 
@@ -296,7 +300,7 @@ def direct_feed(source):
         row = candidate(item.findtext('title') or item.findtext(f'{ns}title'),
                         urllib.parse.urljoin(source['url'], link) if link else '',
                         date, description, 'direct')
-        if row and in_window(row, PERSON_HOURS):
+        if row and in_window(row, PERSON_FALLBACK_HOURS):
             rows.append(row)
     return rows, len(entries)
 
@@ -326,7 +330,7 @@ def web_source(source, url=None):
         if metadata:
             title, date, description = metadata[:3]
             row = candidate(title, link, date, description, 'web')
-            if row and in_window(row, PERSON_HOURS):
+            if row and in_window(row, PERSON_FALLBACK_HOURS):
                 rows.append(row)
     return rows, len(links)
 
@@ -344,7 +348,7 @@ def hacker_news():
                 link = item.get('url', '')
                 meta = publisher_article(link) if link and publisher_for(link) else None
                 row = candidate(meta[0], link, meta[1], meta[2], 'Hacker News') if meta else None
-                if row and in_window(row, PERSON_HOURS):
+                if row and in_window(row, PERSON_FALLBACK_HOURS):
                     rows.append(row)
             except (OSError, ValueError):
                 continue
@@ -407,7 +411,7 @@ def aihot_page_rows(mode, max_pages):
                 seen.add(row['canonical_url'])
                 if in_window(row, NEWS_HOURS):
                     counts['valid_18h'] += 1
-                if in_window(row, PERSON_HOURS):
+                if in_window(row, PERSON_FALLBACK_HOURS):
                     rows.append(row)
         page = payload.get('page') if isinstance(payload.get('page'), dict) else {}
         cursor = page.get('nextCursor')
@@ -433,6 +437,16 @@ def aihot_candidates():
 MEDIA = json.loads((ROOT / 'editorial_media.json').read_text('utf-8'))
 GENERIC_IMAGE = re.compile(r'(?:^|[/_.-])(?:logo|placeholder|default|avatar|favicon|site-icon)(?:[/_.-]|$)', re.I)
 BUSY_COVER = re.compile(r'benchmark|chart\b|bar.graph|headquarters|company.building|评测图|柱状图|总部大楼', re.I)
+
+
+def reviewed_person_event(url):
+    target = canonical_url(url)
+    if target:
+        for profile in MEDIA['people']:
+            for event in profile.get('verified_events', []):
+                if canonical_url(event['url']) == target:
+                    return profile, event
+    return None
 
 
 def verified_person(name):
@@ -709,6 +723,8 @@ people = [
 
 name_roles = dict(people)
 name_roles.update({person['name']: person['role'] for person in SOURCE_CONFIG['person_watchlist']})
+name_roles.update({name: item['role'] for item in MEDIA['people']
+                   for name in [item['name'], *item.get('aliases', [])]})
 def identify_person(title):
     # Ignore SEO keyword suffixes rather than treating them as actual news subjects.
     title = re.split(r'[|｜](?:DeepSeek|AI|OpenAI|英伟达|限额|模型|人工智能|科技|新闻)(?:[|｜]|$)', title, maxsplit=1, flags=re.I)[0]
@@ -1058,10 +1074,50 @@ def classify_news(card):
 
 
 def choose_people(rows, history):
+    fresh = [row for row in rows if in_window(row, PERSON_HOURS)]
     people_cards, selected, names = [], [], []
-    for row in rows:
-        if not in_window(row, PERSON_HOURS):
+    pick_people(fresh, history, people_cards, selected, names)
+    pick_reviewed_people(history, people_cards, selected, names, PERSON_HOURS)
+    older = [row for row in rows if not in_window(row, PERSON_HOURS) and in_window(row, PERSON_FALLBACK_HOURS)]
+    pick_people(older, history, people_cards, selected, names)
+    pick_reviewed_people(history, people_cards, selected, names, PERSON_FALLBACK_HOURS)
+    return people_cards, selected, names
+
+
+def pick_reviewed_people(history, cards, selected, names, hours):
+    for item in MEDIA['people']:
+        if len(cards) >= 3:
+            break
+        profile = verified_person(item['name'])
+        if not profile or profile['name'] in names:
             continue
+        for event in profile.get('verified_events', []):
+            row = candidate(event['title'], event['url'], event['published_at'], event['body'], '核实的原文')
+            if (not row or not in_window(row, hours) or blocked(row)
+                    or any(duplicate_event(row, old) for old in history + selected)):
+                continue
+            cards.append(person_card(row, profile, event['title'], event['body']))
+            selected.append(row)
+            names.append(profile['name'])
+            break
+
+
+def person_card(row, profile, title, body):
+    stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
+    return {
+        'name': profile['name'] + '｜' + profile['role'], 'title': title, 'body': body,
+        'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
+        'url': row['article_url'], 'discovered_via': row['discovered_via'],
+        'category': 'person', 'publisher': row['source'],
+        'person': profile['name'], 'role_source': profile['role_source'],
+        'published_at_beijing': row['published_at_beijing'],
+    }
+
+
+def pick_people(rows, history, people_cards, selected, names):
+    for row in rows:
+        if len(selected) >= 3:
+            break
         name, role = identify_person(row['title'])
         story = row
         if not name or not PERSON_ACTION.search(row['title']):
@@ -1095,20 +1151,9 @@ def choose_people(rows, history):
         body = news_summary(row, 35, 55, headline)
         if not body:
             continue
-        stamp = parse_date(row['published_at']).astimezone(BEIJING).strftime('%m-%d %H:%M')
-        people_cards.append({
-            'name': name + '｜' + role, 'title': headline, 'body': body,
-            'source': row['source'] + ' · ' + stamp, 'published_at': row['published_at'],
-            'url': row['article_url'], 'discovered_via': row['discovered_via'],
-            'category': 'person', 'publisher': row['source'],
-            'person': name, 'role_source': profile['role_source'],
-            'published_at_beijing': row['published_at_beijing'],
-        })
+        people_cards.append(person_card(row, profile, headline, body))
         selected.append(row)
         names.append(name)
-        if len(selected) == 3:
-            break
-    return people_cards, selected, names
 
 
 def choose_news(rows, history, people_rows):
@@ -1228,9 +1273,10 @@ def collect():
                 'url': source['url'], 'category': source['category'], 'method': method,
                 **details, **status, 'raw': raw,
                 'valid_18h': sum(in_window(row, NEWS_HOURS) for row in gathered),
-                'valid_48h': len(gathered),
+                'valid_48h': sum(in_window(row, PERSON_HOURS) for row in gathered),
                 'topic_qualified_18h': sum(in_window(row, NEWS_HOURS) for row in eligible),
-                'topic_qualified_48h': len(eligible), 'topic_filtered': len(gathered) - len(eligible),
+                'topic_qualified_48h': sum(in_window(row, PERSON_HOURS) for row in eligible),
+                'topic_filtered': len(gathered) - len(eligible),
                 'selected_news': 0, 'selected_people': 0,
             }
             rows.extend(dict(row, ingest_source=name) for row in eligible)
@@ -1257,7 +1303,7 @@ def final_problems(news_cards, people_cards):
         if (not profile or card.get('name') != profile['name'] + '｜' + profile['role']
                 or card.get('role_source') != profile['role_source']):
             problems.append(f'科技人物身份或职务证据不足：{card.get("name", card.get("title"))}')
-    for card, hours in [(c, NEWS_HOURS) for c in news_cards] + [(c, PERSON_HOURS) for c in people_cards]:
+    for card, hours in [(c, NEWS_HOURS) for c in news_cards] + [(c, PERSON_FALLBACK_HOURS) for c in people_cards]:
         if not all(card.get(key) for key in ('title', 'body', 'source', 'url', 'published_at')):
             problems.append(f'缺少标题、正文或溯源字段：{card.get("title")}')
         if not in_window(card, hours):
@@ -1281,16 +1327,18 @@ def main():
         if not test_mode or not when:
             parser.error('--as-of requires test mode and a timezone-aware timestamp')
         NOW = when
-    today = NOW.astimezone(BEIJING).date().isoformat()
+    issue_date = NOW.astimezone(BEIJING).date()
+    today = issue_date.isoformat()
     state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
     same_day = any(item.get('date') == today for item in state['items'][-7:])
-    issue = str(int(state.get('last_issue', 2)) + (0 if same_day else 1)).zfill(3)
+    issue = (f'{10 + (issue_date - ISSUE_START_DATE).days:03d}' if issue_date >= ISSUE_START_DATE
+             else str(int(state.get('last_issue', 2)) + (0 if same_day else 1)).zfill(3))
     history = [item for item in state['items'] if item.get('date', '') < today]
     out = ROOT / ('test-output' if test_mode else 'output')
     out.mkdir(exist_ok=True)
     rows, stats = collect()
     eligible_history = [row for row in rows if not any(duplicate_event(row, old) for old in history)]
-    people_cards, people_rows, names = choose_people(eligible_history, [])
+    people_cards, people_rows, names = choose_people(eligible_history, history)
     news_cards, news_rows = choose_news(eligible_history, [], people_rows)
     problems = final_problems(news_cards, people_cards)
     selected = news_rows + people_rows
@@ -1313,12 +1361,12 @@ def main():
         'sources': stats, 'unique_candidates': len(rows), 'history_rejected': len(rows) - len(eligible_history),
         'news_selected': news_cards, 'people_selected': people_cards,
         'person_candidates': [
-            row for row in eligible_history if in_window(row, PERSON_HOURS)
+            row for row in eligible_history if in_window(row, PERSON_FALLBACK_HOURS)
             and identify_person(row['title'] + ' ' + row['description'])[0]
         ][:40],
         'unverified_people': [
             {'article': row['article_url'], 'name': name}
-            for row in eligible_history if in_window(row, PERSON_HOURS)
+            for row in eligible_history if in_window(row, PERSON_FALLBACK_HOURS)
             and (name := identify_person(row['title'] + ' ' + row['description'])[0])
             and not verified_person(name)
         ][:40],

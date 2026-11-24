@@ -10,6 +10,20 @@ import daily_auto as daily
 
 
 class EditorialTests(unittest.TestCase):
+
+    def test_reviewed_people_replay_expiry_and_history(self):
+        as_of = daily.parse_date('2026-11-24T08:32:04+08:00')
+        with patch.object(daily, 'NOW', as_of):
+            cards, rows, names = daily.choose_people([], [])
+            self.assertEqual(names, ['黄仁勋', 'Logan Kilpatrick', 'Simon Willison'])
+            self.assertEqual(len(cards), 3)
+            self.assertEqual(daily.final_problems([], cards), ['栏目数量不足：新闻 0/4，人物 3/3'])
+            self.assertIsNone(daily.publisher_for('https://x.com/OfficialLoganK/status/123'))
+            self.assertNotIn('黄仁勋', daily.choose_people([], rows[:1])[2])
+        with patch.object(daily, 'NOW', daily.parse_date('2026-11-27T08:32:04+08:00')):
+            self.assertEqual(len(daily.choose_people([], [])[0]), 3)
+        with patch.object(daily, 'NOW', daily.parse_date('2026-11-29T08:32:04+08:00')):
+            self.assertEqual(daily.choose_people([], [])[0], [])
     def setUp(self):
         now = patch.object(daily, 'NOW', dt.datetime(2026, 11, 21, 12, tzinfo=dt.timezone.utc))
         now.start()
