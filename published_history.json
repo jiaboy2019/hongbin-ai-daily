@@ -1,5 +1,5 @@
 {
-  "last_issue": 6,
+  "last_issue": 7,
   "items": [
     {
       "key": "2d093e89461704ab14bd",
@@ -1255,6 +1255,41 @@
       "key": "eff121d1b8d7aaa591df",
       "title": "微软 CEO 纳德拉感叹：Claude Code 仅半年动摇 VS Code 地位",
       "date": "2026-11-23"
+    },
+    {
+      "key": "061f593f565192f43285",
+      "title": "黄仁勋重返英伟达，市值涨31.48%；马斯克：AI 研发落后对手，出租算力比自研更赚钱；新一代AI 模型更爱「爆粗口」",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "93f5ebd60eeb76f6c323",
+      "title": "重大突破！机器人上岗造芯片：智元精灵G2进驻长电临港封测产线",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "6ccb5cd236f26d65d7bf",
+      "title": "OpenAI预训练指标曝光：27年AI将雪崩式爆发！",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "ea5a9066ddff8eb4b15d",
+      "title": "AI早报 | OpenAI首席科学家提议建立行业统一AI安全标准；智谱GLM-5.4上线",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "790418586c7561464004",
+      "title": "微软 CEO 纳德拉承认，VS Code 的护城河被人从终端绕过去了- OSCHINA - 开源 × AI · 开发者生态社区",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "446712666c9748e41d92",
+      "title": "Jensen Huang’s Return to Nvidia Doesn’t Solve AI’s Problems",
+      "date": "2026-11-24"
+    },
+    {
+      "key": "876b1b005ecea6740d3d",
+      "title": "OpenAI calls for industry-wide AI safety limits: Why Sam Altman wants rival AI labs to agree",
+      "date": "2026-11-24"
     }
   ]
 }

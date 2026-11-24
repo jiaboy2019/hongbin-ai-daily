@@ -1,49 +1,49 @@
 {
-  "issue": "006",
-  "date": "2026-11-23",
+  "issue": "007",
+  "date": "2026-11-24",
   "headline": {
-    "title": "AI游戏冰火两重天：有人三天卖出10万份，有人上线一个月无人问津",
-    "body": "AI游戏冰火两重天：有人三天卖出10万份，有人上线一个月无人问津。",
-    "source": "36氪"
+    "title": "AI 研发落后对手",
+    "body": "黄仁勋重返英伟达，市值涨31.48%；马斯克：AI 研发落后对手，出租算力比自研更赚钱；新一代AI 模型更爱「爆粗口」。",
+    "source": "极客公园"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "全球首款AI智能体PC登场",
-      "body": "全球首款AI智能体PC登场！华硕ProArt创16RTXSpark重塑AI创作流。",
-      "source": "机核GCORES"
+      "title": "机器人上岗造芯片",
+      "body": "重大突破！机器人上岗造芯片：智元精灵G2进驻长电临港封测产线。",
+      "source": "驱动之家"
     },
     {
       "tag": "产品应用",
-      "title": "大模型竞赛进入AI4S深水区",
-      "body": "大模型竞赛进入AI4S深水区，“沪牌”模型在密码学领域取得重要突破。",
-      "source": "上观新闻"
+      "title": "OpenAI预训练指标曝光",
+      "body": "OpenAI预训练指标曝光：27年AI将雪崩式爆发。",
+      "source": "智源社区"
     },
     {
       "tag": "前沿科技",
-      "title": "OpenAI首席科学家提议",
-      "body": "OpenAI首席科学家提议：在理解能力跟上之前，为AI开发设“行业上限”_滚动新闻_财经。",
-      "source": "证券之星"
+      "title": "智谱GLM-5.4上线",
+      "body": "AI早报 | OpenAI首席科学家提议建立行业统一AI安全标准；智谱GLM-5.4上线。",
+      "source": "Jiemian.com"
     }
   ],
   "leaders": [
     {
-      "name": "马斯克｜xAI创始人",
-      "title": "从拒绝马斯克到共同创立Anthropic",
-      "body": "从拒绝马斯克到共同创立Anthropic：阿莫迪兄妹如何掌管万亿美元AI公司。",
-      "source": "凤凰网"
-    },
-    {
-      "name": "奥尔特曼｜OpenAI CEO",
-      "title": "OpenAI 首席科学家警告",
-      "body": "OpenAI 首席科学家警告：AI 最早可能在 2027 年加速自身发展，奥尔特曼赞同为 AI 开发设限。",
-      "source": "IT之家"
-    },
-    {
       "name": "纳德拉｜微软CEO",
-      "title": "微软首席执行官纳德拉感叹",
-      "body": "微软首席执行官纳德拉感叹：Claude Code 仅半年就动摇了 VS Code 的地位。",
-      "source": "IT之家"
+      "title": "微软 CEO 纳德拉承认",
+      "body": "微软 CEO 纳德拉承认。",
+      "source": "OSCHINA"
+    },
+    {
+      "name": "Jensen Huang｜英伟达CEO",
+      "title": "黄仁勋回归英伟达并不能解决人工智能的问题",
+      "body": "黄仁勋回归英伟达并不能解决人工智能的问题。",
+      "source": "Bloomberg.com"
+    },
+    {
+      "name": "Sam Altman｜OpenAI CEO",
+      "title": "OpenAI呼吁制定全行业人工智能安全限制",
+      "body": "OpenAI呼吁制定全行业人工智能安全限制：为什么萨姆·阿尔特曼希望竞争对手的人工智能实验室同意。",
+      "source": "The Times of India"
     }
   ]
 }
