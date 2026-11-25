@@ -46,6 +46,8 @@ def photo(n):
     for u in urls:
         try:
             im=ImageOps.exif_transpose(Image.open(io.BytesIO(fetch(u)))).convert("RGB")
+            if n == 0:
+                panel=Image.new("RGB",(480,318),"#e7e3da");im.thumbnail((480,318));panel.paste(im,((480-im.width)//2,(318-im.height)//2));return enc(panel)
             return enc(ImageOps.fit(im,(480,318),centering=(.5,.26)))
         except Exception:pass
     raise RuntimeError("Missing verified portrait "+str(n))
