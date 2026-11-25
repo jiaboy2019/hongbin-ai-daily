@@ -1,5 +1,5 @@
 {
-  "last_issue": 7,
+  "last_issue": 8,
   "items": [
     {
       "key": "2d093e89461704ab14bd",
@@ -1290,6 +1290,46 @@
       "key": "876b1b005ecea6740d3d",
       "title": "OpenAI calls for industry-wide AI safety limits: Why Sam Altman wants rival AI labs to agree",
       "date": "2026-11-24"
+    },
+    {
+      "key": "d33f48fc9c9411546289",
+      "title": "OpenAI 发布预印本：GPT-6 模型展现内在蛋白质设计能力",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "e5b87bd4237fbc34fbf7",
+      "title": "OpenAI Staffer Charged With Planting Bug Released on Bond",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "ef985cf9111c4f5c75fb",
+      "title": "Walmart teams up with Meta to bring Black Friday deals to AI agent Muse",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "034acdcdd032154e9988",
+      "title": "Tidal announces ban on AI-generated music; 27 million tracks will be deleted",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "1cfa6fd91b5d27a2e38e",
+      "title": "Asian markets lose ground as AI fears return",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "3cc35b4e9fae48bc14cb",
+      "title": "【物理AI】彻底爆发！王兴兴，关键表态！宇树科技、上纬新材双双涨停！",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "07f98d7cfe34dfa74a8e",
+      "title": "杨立昆转发三年前视频 怒批Anthropic掌门人：夸大AI风险 想禁开放模型",
+      "date": "2026-11-25"
+    },
+    {
+      "key": "9e597e43c6dc1dd387eb",
+      "title": "“我比黄仁勋更早看到英伟达的未来”，AI 教父回击老黄，直言大规模失业是 AI 巨头赚钱的副作用",
+      "date": "2026-11-25"
     }
   ]
 }

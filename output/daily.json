@@ -1,49 +1,49 @@
 {
-  "issue": "007",
-  "date": "2026-11-24",
+  "issue": "008",
+  "date": "2026-11-25",
   "headline": {
-    "title": "AI 研发落后对手",
-    "body": "黄仁勋重返英伟达，市值涨31.48%；马斯克：AI 研发落后对手，出租算力比自研更赚钱；新一代AI 模型更爱「爆粗口」。",
-    "source": "极客公园"
+    "title": "OpenAI 发布预印本：GPT-6 模型展现内在蛋白质设计能力",
+    "body": "OpenAI 发布预印本。",
+    "source": "OpenAI：官网动态（RSS · 排除企业/客户案例）"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "机器人上岗造芯片",
-      "body": "重大突破！机器人上岗造芯片：智元精灵G2进驻长电临港封测产线。",
-      "source": "驱动之家"
+      "title": "OpenAI 员工被控植入漏洞 保释后获释",
+      "body": "OpenAI 员工被控植入漏洞 保释后获释。",
+      "source": "Bloomberg.com"
     },
     {
       "tag": "产品应用",
-      "title": "OpenAI预训练指标曝光",
-      "body": "OpenAI预训练指标曝光：27年AI将雪崩式爆发。",
-      "source": "智源社区"
+      "title": "沃尔玛与 Meta 合作",
+      "body": "沃尔玛现在允许客户通过 Meta 的人工智能代理 Muse 购买黑色星期五优惠。",
+      "source": "TechCrunch"
     },
     {
       "tag": "前沿科技",
-      "title": "智谱GLM-5.4上线",
-      "body": "AI早报 | OpenAI首席科学家提议建立行业统一AI安全标准；智谱GLM-5.4上线。",
-      "source": "Jiemian.com"
+      "title": "Tidal 宣布禁止人工智能生成音乐",
+      "body": "Tidal 宣布禁止人工智能生成音乐； 2700万首曲目将被删除。",
+      "source": "Ars Technica"
     }
   ],
   "leaders": [
     {
-      "name": "纳德拉｜微软CEO",
-      "title": "微软 CEO 纳德拉承认",
-      "body": "微软 CEO 纳德拉承认。",
-      "source": "OSCHINA"
+      "name": "王兴兴｜宇树科技创始人",
+      "title": "【物理AI】彻底爆发",
+      "body": "【物理AI】彻底爆发！王兴兴，关键表态！宇树科技、上纬新材双双涨停。",
+      "source": "新浪财经"
     },
     {
-      "name": "Jensen Huang｜英伟达CEO",
-      "title": "黄仁勋回归英伟达并不能解决人工智能的问题",
-      "body": "黄仁勋回归英伟达并不能解决人工智能的问题。",
-      "source": "Bloomberg.com"
+      "name": "杨立昆｜AI科学家",
+      "title": "夸大AI风险 想禁开放模型",
+      "body": "杨立昆转发三年前视频 怒批Anthropic掌门人：夸大AI风险 想禁开放模型。",
+      "source": "驱动之家"
     },
     {
-      "name": "Sam Altman｜OpenAI CEO",
-      "title": "OpenAI呼吁制定全行业人工智能安全限制",
-      "body": "OpenAI呼吁制定全行业人工智能安全限制：为什么萨姆·阿尔特曼希望竞争对手的人工智能实验室同意。",
-      "source": "The Times of India"
+      "name": "黄仁勋｜英伟达CEO",
+      "title": "我比黄仁勋更早看到英伟达的未来",
+      "body": "“我比黄仁勋更早看到英伟达的未来”，AI 教父回击老黄，直言大规模失业是 AI 巨头赚钱的副作用。",
+      "source": "36Kr"
     }
   ]
 }
