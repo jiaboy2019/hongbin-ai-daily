@@ -59,3 +59,14 @@ with sync_playwright() as p:
     raw=base64.b64decode(uri.split(",")[1]);im=Image.open(io.BytesIO(raw));assert im.size==(941,1671);im.verify()
     (out/"issue-012.png").write_bytes(raw);(out/"洪滨每日AI早报.png").write_bytes(raw)
     (out/"daily.json").write_text(json.dumps(D,ensure_ascii=False,indent=2));b.close()
+
+# Persist the edition on its own branch before the default workflow's main-branch sync.
+import subprocess
+def git(*args):
+    subprocess.run(["git",*args],check=True)
+git("config","user.name","github-actions[bot]")
+git("config","user.email","41898282+github-actions[bot]@users.noreply.github.com")
+git("add","output/issue-012.png","output/洪滨每日AI早报.png","output/daily.json")
+if subprocess.run(["git","diff","--cached","--quiet"]).returncode:
+    git("commit","-m","Save reviewed issue 012 PNG")
+    git("push","origin","HEAD:refs/heads/editions/012-selected-20261125")
