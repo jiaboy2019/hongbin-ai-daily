@@ -924,6 +924,46 @@ if any(not valid_summary(r) for r in news + selected):
     }
     (OUT / 'editorial_review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), 'utf-8')
     raise RuntimeError(f'{len(invalid)}条入选内容缺少独立摘要，已输出待审报告，拒绝出图')
+# Give the selected stories first chance at a relevant image, then try reserve stories
+# which already passed the same editorial checks. Keep the original story if no match exists.
+used_image_pages = set()
+used_images = set()
+
+def news_image(row):
+    uri = fetch_article_image(row)
+    matched = '原报道配图'
+    if not uri or uri in used_images:
+        uri, matched = fetch_news_image(row['title'], used_image_pages)
+    if not uri or uri in used_images:
+        return None, None
+    used_images.add(uri)
+    return uri, matched
+
+news_images = [news_image(row) for row in news]
+reserve_attempts = 0
+tried_reserve = {row['key'] for row in news}
+for index, (uri, _) in enumerate(news_images):
+    if uri:
+        continue
+    for candidate in ready_pool:
+        if reserve_attempts >= 16:
+            break
+        if candidate['key'] in tried_reserve:
+            continue
+        if any(candidate['key'] == row['key'] or similar(candidate['title'], row['title']) for row in news):
+            continue
+        replacement = dict(candidate, headline_only_news=not valid_description(candidate))
+        if not valid_summary(replacement):
+            continue
+        tried_reserve.add(candidate['key'])
+        reserve_attempts += 1
+        replacement_image = news_image(replacement)
+        if replacement_image[0]:
+            print('新闻配图补选:', news[index]['title'], '=>', replacement['title'])
+            news[index] = replacement
+            news_images[index] = replacement_image
+            break
+
 issue = issue_for_date(TODAY)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
@@ -973,15 +1013,8 @@ with sync_playwright() as p:
     page.evaluate('document.fonts.ready')
     # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
     news_image_count = 0
-    used_image_pages = set()
-    used_images = set()
-    for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-        uri = fetch_article_image(row)
-        matched = '原报道配图'
-        if not uri or uri in used_images:
-            uri, matched = fetch_news_image(row['title'], used_image_pages)
-        if uri and uri not in used_images:
-            used_images.add(uri)
+    for key, (uri, matched) in zip(['headline', 'u0', 'u1', 'u2'], news_images):
+        if uri:
             page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
             print('新闻配图:', key, matched)
             news_image_count += 1
