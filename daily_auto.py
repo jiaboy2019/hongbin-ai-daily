@@ -761,7 +761,7 @@ def international_primary_source(row):
     return any(name in source for name in INTERNATIONAL_PRIMARY_SOURCES)
 
 ready_pool = sorted(
-    [r for r in news + domestic + direct_news + international_news + site_news
+    [r for r in news
      if r['key'] not in used and not any(similar(r['title'], person['title']) for person in selected)
      and editorial_eligible(r) and relevant_ai_news(r) and score(r)>0 and quality_gate(r)
      and is_chinese_ready(r) and publishable_title(r, 32) and publishable_title(r, 22)
@@ -793,8 +793,8 @@ if len(new_selection)<4:
         'reason': f'18 小时内合格普通新闻仅 {len(new_selection)}/4 条',
         'diagnostics': {
             'translation_service_rate_limited': translation_unavailable,
-            'all_news_candidates': len(news + domestic + direct_news + international_news),
-            'independent_summary_candidates': sum(valid_description(r) for r in news + domestic + direct_news + international_news),
+            'all_news_candidates': len(news),
+            'independent_summary_candidates': sum(valid_description(r) for r in news),
             'chinese_with_independent_summary': len(ready_pool),
             'distinct_news_selected': len(new_selection),
         },
@@ -802,7 +802,7 @@ if len(new_selection)<4:
             {'title': r['title'], 'source': r['source'],
              'description': tidy(r.get('description',''))[:240],
              'has_independent_summary': valid_description(r), 'score': score(r)}
-            for r in sorted(news + domestic + direct_news + international_news, key=score, reverse=True)[:40]
+            for r in sorted(news, key=score, reverse=True)[:40]
         ],
         'note': '待人工审阅，不得直接作为正式新闻发布。'
     }
