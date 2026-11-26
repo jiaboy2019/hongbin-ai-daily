@@ -1,5 +1,5 @@
 {
-  "last_issue": 8,
+  "last_issue": 9,
   "items": [
     {
       "key": "2d093e89461704ab14bd",
@@ -1330,6 +1330,46 @@
       "key": "9e597e43c6dc1dd387eb",
       "title": "“我比黄仁勋更早看到英伟达的未来”，AI 教父回击老黄，直言大规模失业是 AI 巨头赚钱的副作用",
       "date": "2026-11-25"
+    },
+    {
+      "key": "3aebf55428c882db1593",
+      "title": "CoreWeave, Nvidia Credit Risk Hit Fresh Highs as AI Woes Mount",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "04ac9164a2f516001366",
+      "title": "OpenAI says heavy ChatGPT users may hit limits sooner as it merges Chat and Work",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "e4cd4eb6b02a987cab6e",
+      "title": "Endava Becomes Anthropic Select Partner to Accelerate AI-Native Engineering and Business AI Value",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "e39f9831a7009a1cd69e",
+      "title": "42 州总检察长介入 Character.AI 破产程序，反对拍卖用户私密聊天记录",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "73a4d85ac83ff7303f68",
+      "title": "AI“教父”杨立昆怒怼Anthropic CEO：渲染AI危险，只是想让开源模型非法-36氪",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "45d3bbdee0aa1fabd290",
+      "title": "AI“教父”杨立昆怒怼Anthropic CEO：渲染AI危险，只是想让开源模型非法",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "1af2717485862b42dbd2",
+      "title": "Yann LeCun Blasts Anthropic CEO: Inflating AI Risks to Outlaw Open-Source Models",
+      "date": "2026-11-26"
+    },
+    {
+      "key": "2b18c4f09c795a89dcf8",
+      "title": "路透：黄仁勋重掌英伟达 对AI信用市场减压有限",
+      "date": "2026-11-26"
     }
   ]
 }

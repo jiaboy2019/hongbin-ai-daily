@@ -1,49 +1,49 @@
 {
-  "issue": "008",
-  "date": "2026-11-25",
+  "issue": "009",
+  "date": "2026-11-26",
   "headline": {
-    "title": "OpenAI 发布预印本：GPT-6 模型展现内在蛋白质设计能力",
-    "body": "OpenAI 发布预印本。",
-    "source": "OpenAI：官网动态（RSS · 排除企业/客户案例）"
+    "title": "随着人工智能困境加剧",
+    "body": "随着人工智能困境加剧，CoreWeave 和 Nvidia 信用风险创下新高。",
+    "source": "Bloomberg"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "OpenAI 员工被控植入漏洞 保释后获释",
-      "body": "OpenAI 员工被控植入漏洞 保释后获释。",
-      "source": "Bloomberg.com"
-    },
-    {
-      "tag": "产品应用",
-      "title": "沃尔玛与 Meta 合作",
-      "body": "沃尔玛现在允许客户通过 Meta 的人工智能代理 Muse 购买黑色星期五优惠。",
+      "title": "重度用户可能更快达到使用上限",
+      "body": "OpenAI表示，随着ChatGPT将聊天和工作功能合并，重度用户可能更快达到使用上限。",
       "source": "TechCrunch"
     },
     {
+      "tag": "产品应用",
+      "title": "以加速原生AI工程和商业AI价值的实现",
+      "body": "Endava成为Anthropic精选合作伙伴，以加速原生AI工程和商业AI价值的实现。",
+      "source": "Financial Times"
+    },
+    {
       "tag": "前沿科技",
-      "title": "Tidal 宣布禁止人工智能生成音乐",
-      "body": "Tidal 宣布禁止人工智能生成音乐； 2700万首曲目将被删除。",
-      "source": "Ars Technica"
+      "title": "反对拍卖用户私密聊天记录",
+      "body": "42 州总检察长介入 Character.AI 的破产程序。",
+      "source": "TechCrunch：AI（RSS）"
     }
   ],
   "leaders": [
     {
-      "name": "王兴兴｜宇树科技创始人",
-      "title": "【物理AI】彻底爆发",
-      "body": "【物理AI】彻底爆发！王兴兴，关键表态！宇树科技、上纬新材双双涨停。",
-      "source": "新浪财经"
+      "name": "杨立昆｜AI科学家",
+      "title": "只是想让开源模型非法",
+      "body": "AI“教父”杨立昆怒怼Anthropic CEO：渲染AI危险，只是想让开源模型非法。",
+      "source": "36Kr"
     },
     {
-      "name": "杨立昆｜AI科学家",
-      "title": "夸大AI风险 想禁开放模型",
-      "body": "杨立昆转发三年前视频 怒批Anthropic掌门人：夸大AI风险 想禁开放模型。",
-      "source": "驱动之家"
+      "name": "Yann LeCun｜AI科学家",
+      "title": "夸大人工智能风险以取缔开源模型",
+      "body": "Yann LeCun 抨击 Anthropic 首席执行官：夸大人工智能风险以取缔开源模型。",
+      "source": "BigGo Finance"
     },
     {
       "name": "黄仁勋｜英伟达CEO",
-      "title": "我比黄仁勋更早看到英伟达的未来",
-      "body": "“我比黄仁勋更早看到英伟达的未来”，AI 教父回击老黄，直言大规模失业是 AI 巨头赚钱的副作用。",
-      "source": "36Kr"
+      "title": "路透：黄仁勋重掌英伟达 对AI信用市场减压有限",
+      "body": "路透：黄仁勋重掌英伟达 对AI信用市场减压有限。",
+      "source": "亚洲电视新闻"
     }
   ]
 }
