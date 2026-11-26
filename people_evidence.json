@@ -1,0 +1,100 @@
+{
+  "profiles": [
+    {
+      "name": "Robby Stein",
+      "role": "Google 搜索产品副总裁",
+      "role_source": "https://blog.google/authors/robby-stein/",
+      "portrait_url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Robby_headshot.width-400.format-webp.webp",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Thibault Sottiaux",
+      "aliases": ["蒂博·索蒂奥", "蒂博 · 索蒂奥", "Tibo"],
+      "role": "OpenAI 核心产品与平台负责人",
+      "role_source": "https://vivatech.com/speakers/thibault-sottiaux-openai-3f10d8c5-445b-f111-8fcb-6045bd954326",
+      "portrait_url": "https://storageprdv2inwink.blob.core.windows.net/e935b27a-a548-4b47-af5e-efcb250b84e1/340a208a-65ae-4069-b147-e0a98f203eb4",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Dario Amodei",
+      "aliases": ["阿莫迪"],
+      "role": "Anthropic 联合创始人兼 CEO",
+      "role_source": "https://www.anthropic.com/company/leadership",
+      "portrait_url": "https://assets.claude.com/755f591386038c5c00102aee16ac2f9245ba5d1e.jpg?w=1920&q=75&fm=webp&fit=max",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Yossi Matias",
+      "role": "Google Research 负责人",
+      "role_source": "https://research.google/people/yossi-matias/",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Satya Nadella",
+      "aliases": ["纳德拉"],
+      "role": "微软董事长兼 CEO",
+      "role_source": "https://blogs.microsoft.com/blog/2026/11/17/ignite-2026-building-the-frontier-ecosystem/",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Ian Buck",
+      "role": "英伟达高性能计算副总裁",
+      "role_source": "https://blogs.nvidia.com/blog/author/ian-buck/",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Demis Hassabis",
+      "aliases": ["哈萨比斯"],
+      "role": "Google DeepMind 联合创始人兼 CEO",
+      "role_source": "https://deepmind.google/about/",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "李飞飞",
+      "aliases": ["Fei-Fei Li", "Fei Fei Li"],
+      "role": "斯坦福大学计算机科学教授",
+      "role_source": "https://hai.stanford.edu/people/fei-fei-li",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "苏姿丰",
+      "aliases": ["Lisa Su"],
+      "role": "AMD 董事长兼 CEO",
+      "role_source": "https://www.amd.com/en/corporate/leadership/lisa-su.html",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "name": "Sam Altman",
+      "aliases": ["奥尔特曼", "萨姆·奥特曼"],
+      "role": "OpenAI CEO",
+      "role_source": "https://openai.com/our-structure/",
+      "verified_on": "2026-11-22"
+    }
+  ],
+  "reviewed_events": [
+    {
+      "person": "Robby Stein",
+      "title": "宣布桌面搜索新增 AI 侧栏",
+      "description": "谷歌在桌面搜索推出可折叠侧栏，用户能找回近期查询、检索旧会话或创建笔记本。临时会话关闭后不保留历史。",
+      "source": "The Decoder",
+      "published_at": "2026-11-20T13:19:31+00:00",
+      "article_url": "https://the-decoder.com/googles-latest-homepage-update-pushes-its-search-engine-further-toward-an-ai-answer-engine/"
+    },
+    {
+      "person": "Thibault Sottiaux",
+      "title": "宣布扩大 dots 智能体测试",
+      "description": "少量 Plus 用户获邀试用，企业标准版用户也可使用。他还披露，移动端将为 dots 设置独立标签页。",
+      "source": "IT之家",
+      "published_at": "2026-11-20T09:20:21+08:00",
+      "article_url": "https://www.ithome.com/1/029/784.htm"
+    },
+    {
+      "person": "Dario Amodei",
+      "title": "重申不因外部压力加速 AI 研发",
+      "description": "他在纳斯达克开盘演讲中重申，AI 应由人类掌控，并以协助科研人员推进医学研究为例说明其用途。",
+      "source": "TechCrunch",
+      "published_at": "2026-11-19T16:19:41+00:00",
+      "article_url": "https://techcrunch.com/2026/11/19/at-nasdaq-opening-bell-anthropic-ceo-recommits-to-pacing-ai-development/"
+    }
+  ]
+}
