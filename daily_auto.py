@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'output'
 OUT.mkdir(exist_ok=True)
 TODAY = dt.datetime.now(ZoneInfo('Asia/Shanghai')).date()
+ISSUE_START_DATE = dt.date(2026, 11, 23)
 HISTORY = ROOT / 'published_history.json'
 state = json.loads(HISTORY.read_text('utf-8')) if HISTORY.exists() else {'last_issue': 2, 'items': []}
 old = {x['key'] for x in state['items'] if x.get('date') != TODAY.isoformat()}
@@ -861,7 +862,11 @@ if any(not valid_summary(r) for r in news + selected):
 if any(re.search(pattern, r['title'], re.I) for r in news + selected for pattern in UNVERIFIED_MODEL_PATTERNS):
     raise RuntimeError('发现未经独立确认的模型版本号，停止出图')
 
-issue = str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
+issue = (
+    f'{10 + (TODAY - ISSUE_START_DATE).days:03d}'
+    if TODAY >= ISSUE_START_DATE
+    else str(int(state.get('last_issue', 2)) + (0 if SAME_DAY else 1)).zfill(3)
+)
 data = {
     'issue': issue, 'date': TODAY.isoformat(),
     'headline': {'title': short_headline(news[0]['title'], 32), 'body': article_body(news[0], 88), 'source': news[0]['source']},
