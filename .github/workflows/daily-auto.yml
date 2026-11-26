@@ -2,47 +2,138 @@ name: 洪滨每日AI早报
 
 on:
   push:
-    paths:
-      - '.github/workflows/daily-auto.yml'
-      - 'daily_auto.py'
+    branches: [main]
+    paths: ['.github/daily-trigger.json']
   workflow_dispatch:
+    inputs:
+      preview:
+        description: 只验证出图并上传预览产物
+        type: boolean
+        default: false
   schedule:
-    - cron: '30 21 * * *'
+    - cron: '30 21 * * *' # 北京时间 05:30
+    - cron: '05 22 * * *' # 北京时间 06:05
 
 concurrency:
   group: hongbin-daily-generate
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   generate:
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # 使用固定母版进行完整出图验收；复测全球AI大厂及重大技术进展优先、地方资讯降权
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Check edition and trigger
+        id: edition
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          PREVIEW: ${{ inputs.preview }}
+        run: |
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          today = dt.datetime.now(ZoneInfo('Asia/Shanghai')).date()
+          issue = f'{10 + (today - dt.date(2026, 11, 23)).days:03d}'
+          now = today.isoformat()
+          event = os.environ['EVENT_NAME']
+          preview = os.environ['PREVIEW'] == 'true'
+          proceed = True
+          if event == 'push':
+              # Read the marker from the triggering commit, even if checkout has moved.
+              if subprocess.run(['git', 'cat-file', '-e', os.environ['EVENT_SHA']], check=False).returncode:
+                  subprocess.run(['git', 'fetch', '--no-tags', '--depth=1', 'origin', os.environ['EVENT_SHA']], check=True)
+              marker = subprocess.check_output(
+                  ['git', 'show', os.environ['EVENT_SHA'] + ':.github/daily-trigger.json'],
+                  encoding='utf-8',
+              )
+              request = json.loads(marker)
+              preview = request.get('mode') == 'preview'
+              proceed = request.get('date') == now and request.get('mode') in ('generate', 'preview')
+          complete = False
+          try:
+              daily = json.loads(Path('output/daily.json').read_text('utf-8'))
+              with Path('output/洪滨每日AI早报.png').open('rb') as png:
+                  png_header = png.read(8)
+                  png.seek(-12, 2)
+                  png_end = png.read(12)
+              complete = (
+                  daily.get('date') == now and daily.get('issue') == issue
+                  and png_header == b'\x89PNG\r\n\x1a\n'
+                  and png_end == b'\x00\x00\x00\x00IEND\xaeB\x60\x82'
+              )
+          except (OSError, ValueError, AttributeError):
+              pass
+          if complete and not preview and event != 'workflow_dispatch':
+              proceed = False
+          print(f'{now} issue={issue} event={event} proceed={proceed} preview={preview}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print(f'date={now}\nissue={issue}\nproceed={str(proceed).lower()}\npreview={str(preview).lower()}', file=output)
+          PY
       - name: Check Python syntax
+        if: steps.edition.outputs.proceed == 'true'
         run: python -m py_compile daily_auto.py
       - name: Install Chinese fonts
+        if: steps.edition.outputs.proceed == 'true'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y fonts-noto-cjk
           fc-cache -f
       - name: Install dependencies
+        if: steps.edition.outputs.proceed == 'true'
         run: |
           pip install playwright pillow
           python -m playwright install --with-deps chromium
-      - name: Generate daily image
+      - name: Generate and verify daily image
+        if: steps.edition.outputs.proceed == 'true'
+        env:
+          HONG_BIN_ISSUE_DATE: ${{ steps.edition.outputs.date }}
+          HONG_BIN_ISSUE: ${{ steps.edition.outputs.issue }}
         run: |
-          rm -f output/daily.json output/洪滨每日AI早报.png
-          python daily_auto.py
+          verify_image() {
+            python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from PIL import Image
+
+          out = Path('output')
+          data = json.loads((out / 'daily.json').read_text('utf-8'))
+          if (data['date'], data['issue']) != (os.environ['HONG_BIN_ISSUE_DATE'], os.environ['HONG_BIN_ISSUE']):
+              raise ValueError('Wrong date or issue number')
+          if len(data['updates']) != 3 or len(data['leaders']) != 3:
+              raise ValueError('Incomplete daily edition')
+          with Image.open(out / '洪滨每日AI早报.png') as image:
+              if image.format != 'PNG' or min(image.size) < 600:
+                  raise ValueError('Unexpected PNG format or dimensions')
+              image.verify()
+          PY
+          }
+          for attempt in 1 2; do
+            rm -f output/daily.json output/洪滨每日AI早报.png output/editorial_review.json
+            if timeout 12m python -u daily_auto.py && verify_image; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 1 ]; then sleep 20; fi
+          done
+          exit 1
       - name: Upload editorial review on failure
-        if: failure()
+        if: failure() && steps.edition.outputs.proceed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: hongbin-editorial-review
@@ -50,18 +141,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: Upload PNG
+        if: steps.edition.outputs.proceed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: hongbin-ai-daily
-          path: output/
+          path: |
+            output/daily.json
+            output/洪滨每日AI早报.png
+          if-no-files-found: error
           retention-days: 30
       - name: Save history and latest PNG
+        if: steps.edition.outputs.proceed == 'true' && steps.edition.outputs.preview == 'false'
+        env:
+          HONG_BIN_ISSUE_DATE: ${{ steps.edition.outputs.date }}
         run: |
+          if [ "$(TZ=Asia/Shanghai date +%F)" != "$HONG_BIN_ISSUE_DATE" ]; then
+            echo 'Edition date has changed. The generated PNG remains in the run artifact.'
+            exit 1
+          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add published_history.json output/
-          git commit -m 'Generate daily AI briefing' || exit 0
-          git pull --rebase -X ours origin main
-          git push
-
-# Auto-test whenever Python generator changes; avoid duplicate script blocks.
+          git add -- published_history.json output/daily.json output/洪滨每日AI早报.png
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Generate daily AI briefing'
+          git push origin HEAD:refs/heads/main
