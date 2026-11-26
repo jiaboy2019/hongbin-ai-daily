@@ -284,6 +284,48 @@ def aihot_candidates(max_age_hours=18):
 # 使用百科条目中明确对应人物的肖像，不使用搜索结果中的随机人像。
 PERSON_PAGES = {'黄仁勋':'Jensen_Huang','奥尔特曼':'Sam_Altman','苏姿丰':'Lisa_Su','纳德拉':'Satya_Nadella','李飞飞':'Fei-Fei_Li','马斯克':'Elon_Musk','李彦宏':'Robin_Li','吴泳铭':'Eddie_Wu_(businessman)', '库克':'Tim_Cook', '扎克伯格':'Mark_Zuckerberg', '皮查伊':'Sundar_Pichai', '阿莫迪':'Dario_Amodei', '杨立昆':'Yann_LeCun', '辛顿':'Geoffrey_Hinton', '雷军':'Lei_Jun', '李开复':'Kai-Fu_Lee', '吴恩达':'Andrew_Ng', '王兴兴':'Wang_Xingxing', 'Sam Altman':'Sam_Altman','Jensen Huang':'Jensen_Huang','Demis Hassabis':'Demis_Hassabis','Dario Amodei':'Dario_Amodei','Sundar Pichai':'Sundar_Pichai','Satya Nadella':'Satya_Nadella','Mark Zuckerberg':'Mark_Zuckerberg','Fei-Fei Li':'Fei-Fei_Li','Geoffrey Hinton':'Geoffrey_Hinton','Yann LeCun':'Yann_LeCun','Andrew Ng':'Andrew_Ng'}
 
+def load_image(url, min_edge=1):
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 HongbinDaily/1.0'})
+    with urllib.request.urlopen(req, timeout=8) as response:
+        content = response.read(4_000_000)
+    with Image.open(io.BytesIO(content)) as source:
+        if min(source.size) < min_edge:
+            return None
+        image = source.convert('RGB')
+    image.thumbnail((600, 600))
+    out = io.BytesIO()
+    image.save(out, format='JPEG', quality=82)
+    return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+
+def fetch_article_image(row):
+    url = row.get('article_url', '')
+    host = urllib.parse.urlparse(url).hostname or ''
+    if not url.startswith('https://') or host.endswith(('google.com', 'google.cn', 'googleusercontent.com')):
+        return None
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 HongbinDaily/1.0'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            markup = response.read(350_000).decode('utf-8', 'ignore')
+            article_url = response.geturl()
+        for tag in re.findall(r'<meta\b[^>]*>', markup, re.I):
+            attrs = {key.lower(): value for key, _, value in
+                     re.findall(r'([\w:-]+)\s*=\s*(["\x27])(.*?)\2', tag, re.S)}
+            if (attrs.get('property') or attrs.get('name', '')).lower() not in (
+                'og:image', 'og:image:secure_url', 'twitter:image'
+            ):
+                continue
+            image_url = urllib.parse.urljoin(article_url, html.unescape(attrs.get('content', '').strip()))
+            if image_url.startswith('https://') and attrs.get('content'):
+                try:
+                    image = load_image(image_url, min_edge=120)
+                except (OSError, ValueError):
+                    continue
+                if image:
+                    return image
+    except (OSError, ValueError) as exc:
+        print('原报道配图获取失败:', host, str(exc)[:100])
+    return None
+
 def fetch_wiki_thumbnail(title):
     if not title: return None
     url = 'https://en.wikipedia.org/api/rest_v1/page/summary/' + urllib.parse.quote(title)
@@ -293,14 +335,7 @@ def fetch_wiki_thumbnail(title):
             page = json.load(response)
         photo = (page.get('thumbnail') or {}).get('source')
         if not photo: return None
-        req = urllib.request.Request(photo, headers={'User-Agent':'HongbinDaily/1.0'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            content = response.read(3_000_000)
-        im = Image.open(io.BytesIO(content)).convert('RGB')
-        im.thumbnail((600,600))
-        out = io.BytesIO()
-        im.save(out, format='JPEG', quality=82)
-        return 'data:image/jpeg;base64,' + base64.b64encode(out.getvalue()).decode('ascii')
+        return load_image(photo)
     except Exception as exc:
         print('百科配图下载失败:', title, exc)
         return None
@@ -773,13 +808,15 @@ ready_pool = sorted(
 )
 new_selection = []
 # 国际主流媒体和AI机构优先填满4条，只有不足时才由国内媒体补齐。
-for pool, target in (([r for r in ready_pool if international_primary_source(r)], 4), (ready_pool, 4)):
+for pool in ([r for r in ready_pool if international_primary_source(r)], ready_pool):
+    if len(new_selection) == 4:
+        break
     for r in pool:
         if r['key'] in {x['key'] for x in new_selection}: continue
         if any(similar(r['title'], x['title']) for x in new_selection): continue
         if r['source'] in {x['source'] for x in new_selection}: continue
         new_selection.append(r)
-        if len(new_selection) >= target: break
+        if len(new_selection) == 4: break
 # 来源不足时放宽同媒体限制，但不放宽AI相关性与去重。
 if len(new_selection)<4:
     for r in ready_pool:
@@ -937,9 +974,14 @@ with sync_playwright() as p:
     # 仅填充原模板现有新闻图片槽位，不改变版式；每张图与标题中的实体相符。
     news_image_count = 0
     used_image_pages = set()
+    used_images = set()
     for key, row in zip(['headline', 'u0', 'u1', 'u2'], news):
-        uri, matched = fetch_news_image(row['title'], used_image_pages)
-        if uri:
+        uri = fetch_article_image(row)
+        matched = '原报道配图'
+        if not uri or uri in used_images:
+            uri, matched = fetch_news_image(row['title'], used_image_pages)
+        if uri and uri not in used_images:
+            used_images.add(uri)
             page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', [key, uri])
             print('新闻配图:', key, matched)
             news_image_count += 1
@@ -947,9 +989,12 @@ with sync_playwright() as p:
     # 缺图不阻断出图，沿用原模板的图片占位设计。
     # 只向原模板的既有图片槽位注入真实人物照片；不更改布局和图标。
     portrait_count = 0
-    for i, person in enumerate(leader_names):
+    for i, (person, row) in enumerate(zip(leader_names, selected)):
         uri = fetch_portrait(person)
-        if uri:
+        if not uri or uri in used_images:
+            uri = fetch_article_image(row)
+        if uri and uri not in used_images:
+            used_images.add(uri)
             page.evaluate('''async ([key, src]) => { const im = new Image(); im.src = src; await im.decode(); images[key] = im; render(); }''', ['l' + str(i), uri])
             portrait_count += 1
     print('成功加载人物照片:', portrait_count, '/', len(leader_names))
