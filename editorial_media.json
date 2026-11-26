@@ -1,0 +1,168 @@
+{
+  "people": [
+    {
+      "name": "黄仁勋",
+      "aliases": [
+        "Jensen Huang"
+      ],
+      "role": "英伟达总裁兼 CEO",
+      "role_source": "https://nvidianews.nvidia.com/bios/jensen-huang",
+      "verified_on": "2026-11-24",
+      "images": [
+        {
+          "url": "https://iprsoftwaremedia.com/219/files/202604/f0e9efa72f909f3f08cdd0a48ff92880/69e6b9293d633260eec67804_jensen-1920x1920/jensen-1920x1920_6a7e6ad5-c215-4503-b70d-fe6e5e9de205-prv.jpg?v=6a7e6ad5-c215-4503-b70d-fe6e5e9de205",
+          "evidence": "https://nvidianews.nvidia.com/bios/jensen-huang"
+        }
+      ],
+      "verified_events": [
+        {
+          "url": "https://apnews.com/article/39d4b34ffaa867b4e669893b5fd5028f",
+          "source": "美联社",
+          "published_at": "2026-11-23T14:06:37Z",
+          "title": "黄仁勋获董事会表决恢复职务",
+          "body": "英伟达董事会一致恢复其总裁、首席执行官和董事职务，即刻生效。公司公告后向美国证监会提交了文件。"
+        }
+      ]
+    },
+    {
+      "name": "Logan Kilpatrick",
+      "role": "Google AI Studio 产品负责人",
+      "role_source": "https://blog.google/authors/logan-kilpatrick/",
+      "verified_on": "2026-11-24",
+      "images": [
+        {
+          "url": "https://pbs.twimg.com/profile_images/1943787288955084800/QOl7OJMc_400x400.jpg",
+          "evidence": "https://x.com/OfficialLoganK/status/2125018427790344654"
+        }
+      ],
+      "verified_events": [
+        {
+          "url": "https://x.com/OfficialLoganK/status/2125018427790344654",
+          "source": "Logan Kilpatrick",
+          "published_at": "2026-11-24T00:07:28Z",
+          "title": "Workspace 开放 Gemini 4 Neon",
+          "body": "他确认 Workspace 客户已能使用 Gemini 4 Neon。这次开放的入口是 Gemini 应用。"
+        }
+      ]
+    },
+    {
+      "name": "Simon Willison",
+      "role": "独立开源开发者",
+      "role_source": "https://simonwillison.net/about/",
+      "verified_on": "2026-11-24",
+      "images": [
+        {
+          "url": "https://avatars.githubusercontent.com/u/9599?v=4",
+          "evidence": "https://github.com/simonw"
+        }
+      ],
+      "verified_events": [
+        {
+          "url": "https://simonwillison.net/2026/Nov/23/glm-54/",
+          "source": "Simon Willison",
+          "published_at": "2026-11-23T23:40:49Z",
+          "title": "实测 GLM 5.4 并发布插件",
+          "body": "他用智谱编程套餐接入 GLM 5.4，验证了兼容接口可以调用该模型。随后发布支持该模型的命令行插件。"
+        }
+      ]
+    },
+    {
+      "name": "Robby Stein",
+      "role": "Google 搜索产品副总裁",
+      "role_source": "https://blog.google/authors/robby-stein/",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Robby_headshot.width-400.format-webp.webp",
+          "evidence": "https://blog.google/authors/robby-stein/"
+        }
+      ]
+    },
+    {
+      "name": "Thibault Sottiaux",
+      "aliases": ["蒂博·索蒂奥", "蒂博 · 索蒂奥"],
+      "role": "OpenAI 核心产品与平台负责人",
+      "role_source": "https://vivatech.com/speakers/thibault-sottiaux-openai-3f10d8c5-445b-f111-8fcb-6045bd954326",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://storageprdv2inwink.blob.core.windows.net/e935b27a-a548-4b47-af5e-efcb250b84e1/340a208a-65ae-4069-b147-e0a98f203eb4",
+          "evidence": "https://vivatech.com/speakers/thibault-sottiaux-openai-3f10d8c5-445b-f111-8fcb-6045bd954326"
+        },
+        {
+          "url": "https://techcrunch.com/wp-content/uploads/2026/08/Thibault-headshot.jpg?w=1024",
+          "evidence": "https://techcrunch.com/2026/08/25/the-world-seems-to-be-ready-an-interview-with-openai-head-of-product-thibault-sottiaux/"
+        }
+      ]
+    },
+    {
+      "name": "Dario Amodei",
+      "aliases": ["阿莫迪"],
+      "role": "Anthropic 联合创始人兼 CEO",
+      "role_source": "https://www.anthropic.com/company/leadership",
+      "verified_on": "2026-11-22",
+      "images": [
+        {
+          "url": "https://assets.claude.com/755f591386038c5c00102aee16ac2f9245ba5d1e.jpg?w=1920&q=75&fm=webp&fit=max",
+          "evidence": "https://www.anthropic.com/company/leadership"
+        },
+        {
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Dario_Amodei_at_TechCrunch_Disrupt_2023_01_%28cropped%29.jpg/330px-Dario_Amodei_at_TechCrunch_Disrupt_2023_01_%28cropped%29.jpg",
+          "evidence": "https://commons.wikimedia.org/wiki/File:Dario_Amodei_at_TechCrunch_Disrupt_2023_01_(cropped).jpg"
+        }
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "article": "https://the-decoder.com/z-ai-follows-openai-into-loop-transformer-territory-with-its-new-750b-flagship-model/",
+      "images": [
+        {
+          "url": "https://z-ai-bj.oss-cn-beijing.aliyuncs.com/prompts-rich-media-resources/5.4-blog/20261123-173242.jpeg",
+          "evidence": "https://z.ai/blog/glm-5.4"
+        }
+      ]
+    },
+    {
+      "article": "https://www.ithome.com/1/031/257.htm",
+      "images": [
+        {
+          "url": "https://img.ithome.com/newsuploadfiles/2026/11/fa5dc725-6c05-41e2-8294-de7f4bd1a751.png",
+          "evidence": "https://www.ithome.com/1/031/257.htm"
+        }
+      ]
+    },
+    {
+      "article": "https://www.ithome.com/1/029/841.htm",
+      "images": [
+        {
+          "url": "https://huggingface.co/tencent/Hy4/resolve/main/assets/logo-en.png",
+          "evidence": "https://huggingface.co/tencent/Hy4",
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "article": "https://the-decoder.com/googles-gemini-can-now-run-mac-apps-and-finish-desktop-chores-in-the-background-while-you-keep-working/",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/hero_header_CU_copy.width-1300.png",
+          "evidence": "https://blog.google/innovation-and-ai/products/gemini-app/computer-use-mac/"
+        }
+      ]
+    },
+    {
+      "article": "https://www.cnet.com/tech/services-and-software/google-gemini-clears-firefighter-radio-static/",
+      "images": [
+        {
+          "url": "https://storage.googleapis.com/gweb-uniblog-publish-prod/images/Watch_Duty_Hero_Higher_Res.width-1300.png",
+          "evidence": "https://blog.google/company-news/outreach-and-initiatives/google-org/watch-duty-gemini-tool/"
+        },
+        {
+          "url": "https://www.cnet.com/wp-content/uploads/sites/2/Screenshot-2026-11-19-at-2.54.04-PM.png?w=864",
+          "evidence": "https://www.cnet.com/tech/services-and-software/google-gemini-clears-firefighter-radio-static/"
+        }
+      ]
+    }
+  ]
+}
