@@ -1,49 +1,52 @@
 {
-  "issue": "009",
-  "date": "2026-11-26",
+  "issue": "014",
+  "date": "2026-11-27",
   "headline": {
-    "title": "随着人工智能困境加剧",
-    "body": "随着人工智能困境加剧，CoreWeave 和 Nvidia 信用风险创下新高。",
-    "source": "Bloomberg"
+    "title": "AI Agent 为什么会主动突破安全边界",
+    "body": "Anthropic 1700 余场沙盒实验：AI Agent 为什么会主动突破安全边界。",
+    "source": "Binance"
   },
   "updates": [
     {
       "tag": "AI动态",
-      "title": "重度用户可能更快达到使用上限",
-      "body": "OpenAI表示，随着ChatGPT将聊天和工作功能合并，重度用户可能更快达到使用上限。",
-      "source": "TechCrunch"
+      "title": "奥迪率先推出赛轮思AI移动办公智能体",
+      "body": "奥迪率先推出赛轮思AI移动办公智能体，将企业级可信的Microsoft 365访问体验引入车内。",
+      "source": "新浪新闻_手机新浪网"
     },
     {
       "tag": "产品应用",
-      "title": "以加速原生AI工程和商业AI价值的实现",
-      "body": "Endava成为Anthropic精选合作伙伴，以加速原生AI工程和商业AI价值的实现。",
-      "source": "Financial Times"
+      "title": "阿里加码北美招聘",
+      "body": "阿里加码北美招聘，Qwen团队今年已吸纳数百名AI人才。",
+      "source": "36氪"
     },
     {
       "tag": "前沿科技",
-      "title": "反对拍卖用户私密聊天记录",
-      "body": "42 州总检察长介入 Character.AI 的破产程序。",
-      "source": "TechCrunch：AI（RSS）"
+      "title": "重大模型发布无限期推迟",
+      "body": "美国制裁加剧，中国人工智能发展受阻，重大模型发布无限期推迟。",
+      "source": "亚洲日报"
     }
   ],
   "leaders": [
     {
       "name": "杨立昆｜AI科学家",
-      "title": "只是想让开源模型非法",
-      "body": "AI“教父”杨立昆怒怼Anthropic CEO：渲染AI危险，只是想让开源模型非法。",
-      "source": "36Kr"
+      "title": "渲染人工智能的危险是为了使开源模型非法化",
+      "body": "杨立昆批评Dario Amodei：渲染人工智能的危险是为了使开源模型非法化。",
+      "source": "TradingView",
+      "published_at": "2026-11-25T17:14:21+08:00"
     },
     {
-      "name": "Yann LeCun｜AI科学家",
-      "title": "夸大人工智能风险以取缔开源模型",
-      "body": "Yann LeCun 抨击 Anthropic 首席执行官：夸大人工智能风险以取缔开源模型。",
-      "source": "BigGo Finance"
+      "name": "王兴兴｜宇树科技创始人",
+      "title": "OpenAI并未放弃机器人而是技术收敛",
+      "body": "王兴兴：OpenAI并未放弃机器人而是技术收敛，物理AI底层没有跨不过的门槛。",
+      "source": "ThePaper.cn",
+      "published_at": "2026-11-26T13:49:28+08:00"
     },
     {
       "name": "黄仁勋｜英伟达CEO",
-      "title": "路透：黄仁勋重掌英伟达 对AI信用市场减压有限",
-      "body": "路透：黄仁勋重掌英伟达 对AI信用市场减压有限。",
-      "source": "亚洲电视新闻"
+      "title": "黄仁勋重返英伟达后",
+      "body": "日经亚洲：黄仁勋重返英伟达后，中国会加快构建自主芯片生产体系。",
+      "source": "加美财经",
+      "published_at": "2026-11-26T12:36:47+08:00"
     }
   ]
 }
