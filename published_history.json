@@ -1,5 +1,5 @@
 {
-  "last_issue": 14,
+  "last_issue": 15,
   "items": [
     {
       "key": "2d093e89461704ab14bd",
@@ -1405,6 +1405,41 @@
       "key": "c05dcef68626cd486e61",
       "title": "日经亚洲：黄仁勋重返英伟达后，中国会加快构建自主芯片生产体系",
       "date": "2026-11-27"
+    },
+    {
+      "key": "58cfee93d0488975aa92",
+      "title": "从展台到车站：餐饮机器人探索真实场景商用",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "fdab5587f1c8c37624a6",
+      "title": "Hugging Face工程师新研究：20美元，让多智能体协同任务成功率大涨11倍",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "3bc6e06ee48b2daf7754",
+      "title": "【每日瞰AI】八部门发布服务贸易五年规划，提出有序推动大模型服务出海； 宇树王兴兴：国内机器人年产能有望在5 到 10 年内超过汽车",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "56862c443fae8912cb49",
+      "title": "单卡干到512GB！谷歌第十代AI芯片：要用自己定制的HBM5内存",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "65d4d18aeee2d2005a15",
+      "title": "从卷积神经网络到世界模型：杨立昆数十年坚守基础研究并离开Meta创立AMI Labs",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "5cdbfc08552370e673af",
+      "title": "Nvidia reinstates Jensen Huang and Microsoft launches ads in AI Overviews: Latest industry moves",
+      "date": "2026-11-28"
+    },
+    {
+      "key": "ba0c653a698931719070",
+      "title": "Anthropic CEO Dario Amodei Says Some AI Deployments May Need to Slow So Workers Can Adapt",
+      "date": "2026-11-28"
     }
   ]
 }
